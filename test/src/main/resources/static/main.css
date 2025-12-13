@@ -1,0 +1,21 @@
+* {
+    color-scheme: dark;
+}
+
+html,
+body {
+    margin: 0;
+}
+
+thead {
+    margin-bottom: 5px;
+}
+
+tbody tr {
+    border-bottom: 2px solid black;
+}
+
+td,
+th {
+    padding: 10px;
+}

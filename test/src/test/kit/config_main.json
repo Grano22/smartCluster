@@ -1,0 +1,12 @@
+{
+    "host": "localhost",
+    "tcpPort": 9001,
+    "webPort": 9002,
+    "heartbeatPort": 9003,
+    "discoveryNodes": ["localhost:9013"],
+    "clusters": [
+        {
+            "name": "Main"
+        }
+    ]
+}
