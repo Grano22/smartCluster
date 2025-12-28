@@ -4,7 +4,10 @@ window.addEventListener("load", (wevt) => {
   websocket.addEventListener("open", (socketEvent) => {
     console.log("Synchronization is enabled", socketEvent);
 
-    websocket.send(JSON.stringify({ type: "query_cluster_details" }));
+    websocket.send(JSON.stringify({
+        type: "query_cluster_details",
+        requestedAt: new Date().toISOString()
+    }));
   });
 
   websocket.addEventListener("message", (socketEvent) => {

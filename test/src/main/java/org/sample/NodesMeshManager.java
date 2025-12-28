@@ -1,12 +1,16 @@
 package org.sample;
 
+import lombok.Getter;
+
 import java.time.ZonedDateTime;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public final class NodesMeshManager {
+    @Getter
     private final Set<Cluster> clusters = ConcurrentHashMap.newKeySet();
+    @Getter
     private final ClusterNode self;
 
     public static NodesMeshManager initMeshFromConfig(NodeConfig nodeSettings) {
@@ -30,9 +34,5 @@ public final class NodesMeshManager {
     public NodesMeshManager(ClusterNode self, Set<Cluster> clusters) {
         this.self = self;
         this.clusters.addAll(clusters);
-    }
-
-    public ClusterNode getSelf() {
-        return self;
     }
 }

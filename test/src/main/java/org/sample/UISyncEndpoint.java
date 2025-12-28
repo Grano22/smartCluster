@@ -9,30 +9,50 @@ import jakarta.websocket.Session;
 import jakarta.websocket.server.ServerEndpoint;
 
 import java.io.IOException;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
+import lombok.Builder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 import tools.jackson.databind.json.JsonMapper;
 
+@ServerEndpoint("/view/updates")
 public class UISyncEndpoint {
     @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
         include = JsonTypeInfo.As.PROPERTY,
         property = "type"
     )
-    public sealed interface UISyncCommand {
+    private sealed interface UISyncCommand {
         @JsonTypeName("query_cluster_details")
-        record QueryClusterDetails() implements UISyncCommand {}
+        record QueryClusterDetails(ZonedDateTime requestedAt) implements UISyncCommand {}
+
+        ZonedDateTime requestedAt();
+    }
+
+    private sealed interface UISyncResponseData {
+        record ClustersInfo(Set<Cluster> clusters) implements UISyncResponseData {}
+    }
+
+    @Builder
+    private record UISyncResponse(
+        UISyncResponseData data,
+        ZonedDateTime requestedAt,
+        ZonedDateTime receivedAt,
+        ZonedDateTime processedAt
+    ) {
     }
 
     private final static Marker uiSyncEndpointServiceTag = MarkerFactory.getMarker("UI-Sync");
     private final static Logger logger = LoggerFactory.getLogger(UISyncEndpoint.class);
     private final JsonMapper mapper = JsonMapper.builder()
-            .build();
+        .build();
 
     private record UIClient() {}
     private final ConcurrentHashMap<String, UIClient> clients = new ConcurrentHashMap<>();
@@ -50,20 +70,26 @@ public class UISyncEndpoint {
 
     @OnMessage
     public void onMessage(String message, Session session) {
-        logger.info("Received: {}", message);
+        ZonedDateTime receivedAt = ZonedDateTime.now(ZoneId.of("UTC"));
+        logger.debug("Received message from the client: {}", message);
 
         try {
             UISyncCommand command = mapper.readValue(message, UISyncCommand.class);
 
             switch (command) {
                 case UISyncCommand.QueryClusterDetails clusterDetailsUISyncCommand -> {
-                    session.getBasicRemote().sendText("response");
-                }
-                default -> {
-                    logger.atWarn()
-                        .log("Client tried to perform unsupported operation {}", message)
+                    var response = UISyncResponse.builder()
+                        .data(new UISyncResponseData.ClustersInfo(meshManager.getClusters()))
+                        .receivedAt(receivedAt)
+                        .processedAt(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .requestedAt(command.requestedAt())
                     ;
+                    session.getBasicRemote().sendText(mapper.writeValueAsString(response));
                 }
+                default -> logger.atWarn()
+                    .addMarker(uiSyncEndpointServiceTag)
+                    .log("Client tried to perform unsupported operation {}", message)
+                ;
             }
         } catch (Exception exception) {
             logger.atError()

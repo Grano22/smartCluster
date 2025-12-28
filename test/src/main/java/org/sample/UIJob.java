@@ -61,7 +61,8 @@ public final class UIJob implements Runnable {
         } catch (Exception exception) {
             logger.atError()
                 .addMarker(uiJobServiceMarker)
-                .log("Failed on UI Job: " + exception.getMessage())
+                .setCause(exception)
+                .log("Failed on UI Job")
             ;
         }
     }
