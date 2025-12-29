@@ -43,6 +43,7 @@ public class UISyncEndpoint {
     @Builder
     private record UISyncResponse(
         UISyncResponseData data,
+        String type,
         ZonedDateTime requestedAt,
         ZonedDateTime receivedAt,
         ZonedDateTime processedAt
@@ -79,10 +80,12 @@ public class UISyncEndpoint {
             switch (command) {
                 case UISyncCommand.QueryClusterDetails clusterDetailsUISyncCommand -> {
                     var response = UISyncResponse.builder()
+                        .type("cluster_details")
                         .data(new UISyncResponseData.ClustersInfo(meshManager.getClusters()))
                         .receivedAt(receivedAt)
                         .processedAt(ZonedDateTime.now(ZoneId.of("UTC")))
                         .requestedAt(command.requestedAt())
+                        .build()
                     ;
                     session.getBasicRemote().sendText(mapper.writeValueAsString(response));
                 }
