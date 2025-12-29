@@ -7,12 +7,31 @@ body {
     margin: 0;
 }
 
+.section-centred {
+    margin: 10px auto;
+}
+
+table {
+    border-collapse: collapse;
+    margin: 15px;
+}
+
 thead {
     margin-bottom: 5px;
 }
 
-tbody tr {
-    border-bottom: 2px solid black;
+tbody {
+    tr {
+        border-bottom: 2px solid black;
+    }
+
+    tr:nth-child(odd) {
+        background-color: #55efc4;
+    }
+}
+
+tr {
+    background-color: #00b894;
 }
 
 td,

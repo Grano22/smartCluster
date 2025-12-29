@@ -1,3 +1,8 @@
+const text = await fetch('/main.css').then(r => r.text());
+
+const sharedSheet = new CSSStyleSheet();
+sharedSheet.replaceSync(text);
+
 class DataTable extends HTMLElement {
     #ROW_TEMPLATE;
     #tbody;
@@ -5,6 +10,7 @@ class DataTable extends HTMLElement {
 
     constructor() {
         super();
+        this.shadowRoot.adoptedStyleSheets = [sharedSheet];
         this.#ROW_TEMPLATE = this.shadowRoot.host.querySelector('template#row-template');
         this.removeChild(this.#ROW_TEMPLATE);
         this.#tbody = this.shadowRoot.querySelector('tbody');
@@ -57,24 +63,27 @@ customElements.define('data-table', DataTable);
 window.addEventListener("load", (wevt) => {
     /** @type {DataTable} dataTable **/
     const dataTable = document.getElementById('clustersNodes');
+    const lastSyncNode = document.getElementById('lastClusterSyncDate');
     const websocket = new WebSocket(`ws://${location.host || '127.0.0.1:8080'}/view/updates`);
 
-  websocket.addEventListener("open", (socketEvent) => {
+    websocket.addEventListener("open", (socketEvent) => {
     console.log("Synchronization is enabled", socketEvent);
 
     websocket.send(JSON.stringify({
         type: "query_cluster_details",
         requestedAt: new Date().toISOString()
     }));
-  });
+    });
 
-  websocket.addEventListener("message", (socketEvent) => {
+    websocket.addEventListener("message", (socketEvent) => {
     console.log("Received message", socketEvent);
 
     const incomingEvent = JSON.parse(socketEvent.data);
 
     switch (incomingEvent.type) {
       case "cluster_details":
+          lastSyncNode.textContent = incomingEvent.processedAt;
+
           console.log(incomingEvent, "time to handle it");
           const entries = [];
 
@@ -92,11 +101,11 @@ window.addEventListener("load", (wevt) => {
 
           dataTable.setEntries(entries);
     }
-  });
+    });
 
-  websocket.addEventListener("error", (socketEvent) => {
+    websocket.addEventListener("error", (socketEvent) => {
     console.error(socketEvent);
-  });
+    });
 
-  websocket.addEventListener("close", (socketEvent) => {});
+    websocket.addEventListener("close", (socketEvent) => {});
 });
