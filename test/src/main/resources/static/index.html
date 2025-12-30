@@ -43,10 +43,51 @@
                         <td><!--@ tasks @--></td>
                         <td><!--@ last_heartbeat @--></td>
                         <td><!--@ trip_time @--></td>
-                        <td><button class="execute-on-node">Execute</button></td>
+                        <td><button class="execute-on-node" onclick="$emit('executeOnNode', event)">Execute command</button></td>
                     </tr>
                 </template>
             </data-table>
+
+            <dialog id="commandExecutionDialog">
+                <section class="left-container dialog-header">
+                    <h3>Execute command on Cluster</h3>
+                </section>
+
+                <section class="right-container">
+                    <button class="dialog__closeBtn">&times;</button>
+                </section>
+
+                <section class="section-centred dialog-content">
+                    <form>
+                        <div>
+                            <label>Command:
+                                <input type="text" name="command" required />
+                            </label>
+                        </div>
+
+                        <div>
+                            <label>Runtime type: <select name="runtimeName"></select></label>
+                        </div>
+
+                        <div>
+                            <button type="submit">Execute command</button>
+                        </div>
+
+                        <fieldset>
+                            <legend>Result</legend>
+
+                            <strong>Status code:</strong> <span id="execution__statusCode"></span>
+                            <br />
+                            <div class="copy-snippet">
+                                <div class="copy-snippet-header"<strong>Output:</strong></div>
+                                <div class="copy-snippet-body">
+                                    <pre id="execution__output"></pre>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </form>
+                </section>
+            </dialog>
         </section>
     </body>
 </html>

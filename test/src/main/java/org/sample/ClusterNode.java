@@ -1,12 +1,19 @@
 package org.sample;
 
+import lombok.NonNull;
+
 import java.time.ZonedDateTime;
+import java.util.Set;
 
 public record ClusterNode(
-    String hostname,
+    @NonNull String hostname,
     int tcpPort,
     int heartbeatPort,
-    ZonedDateTime lastHeartbeat,
-    int lastTrip
+    @NonNull ZonedDateTime lastHeartbeat,
+    int lastTrip,
+    @NonNull Set<String> supportedRuntimes
 ) {
+    public ClusterNode {
+        supportedRuntimes = Set.copyOf(supportedRuntimes);
+    }
 }

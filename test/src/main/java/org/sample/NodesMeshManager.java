@@ -1,6 +1,7 @@
 package org.sample;
 
 import lombok.Getter;
+import org.sample.runtime.LanguageExpressionExecutionRuntime;
 
 import java.time.ZonedDateTime;
 import java.util.Set;
@@ -19,7 +20,8 @@ public final class NodesMeshManager {
             nodeSettings.communicationPort(),
             nodeSettings.heartbeatPort(),
             ZonedDateTime.now(),
-            -1
+            -1,
+            Set.of("CLI[Program]", LanguageExpressionExecutionRuntime.NAME)
         );
 
         return new NodesMeshManager(

@@ -6,6 +6,8 @@ import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 
 public final class LanguageExpressionExecutionRuntime implements ExecutionRuntime {
+    public static String NAME = "LanguageExpression";
+
     private final ExpressionParser parser = new SpelExpressionParser();
 
     @Override
@@ -25,6 +27,6 @@ public final class LanguageExpressionExecutionRuntime implements ExecutionRuntim
 
     @Override
     public @NonNull String name() {
-        return "LanguageExpression";
+        return NAME;
     }
 }

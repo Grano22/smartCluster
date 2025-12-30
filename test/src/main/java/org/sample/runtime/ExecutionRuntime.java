@@ -18,7 +18,7 @@ public interface ExecutionRuntime {
             this(command, new String[0], options);
         }
     }
-    record Result(int statusCode, @NonNull String result) {}
+    record Result(int statusCode, @NonNull String output) {}
 
     @NonNull Result execute(@NonNull final Input input);
     @NonNull String name();

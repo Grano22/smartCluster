@@ -1,12 +1,12 @@
 package org.sample;
 
-import lombok.SneakyThrows;
 import org.sample.runtime.CommandLineExecutionRuntime;
 import org.sample.runtime.ExecutionRuntime;
 import org.sample.runtime.LanguageExpressionExecutionRuntime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.simple.SimpleLogger;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.file.Path;
 import java.util.*;
@@ -33,12 +33,13 @@ public class App {
                     .orElse("config.json")
             )
         );
+        JsonMapper jsonMapper = JsonMapper.shared();
         NodesMeshManager nodesMeshManager = NodesMeshManager.initMeshFromConfig(config);
 
         var cliHandler = new CommandLineExecutionRuntime("Program", input -> {
             switch (input.command()) {
                 case "info" -> {
-
+                    return new ExecutionRuntime.Result(0, jsonMapper.writeValueAsString(nodesMeshManager.getClusters()));
                 }
                 case "shutdown" -> System.exit(0);
             }
@@ -60,7 +61,7 @@ public class App {
             var result = cliHandler.execute(new ExecutionRuntime.Input(input));
 
             System.out.println("Status Code: " + result.statusCode());
-            System.out.println("\nMessage: \n" + result.result());
+            System.out.println("\nMessage: \n" + result.output());
         } while (true);
     }
 }

@@ -1,3 +1,31 @@
+:root {
+    --dialog-bg: #ffffff;
+    --dialog-text: #1a1a1a;
+    --dialog-radius: 16px;
+    --dialog-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    --backdrop-color: rgb(0 0 0 / 0.3);
+    --backdrop-blur: 8px;
+    --transition-speed: 0.4s;
+    --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+    --input-bg: #ffffff;
+    --input-border: #e2e8f0;
+    --input-text: #0f172a;
+    --input-placeholder: #94a3b8;
+    --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.25); /* Blue glow */
+    --focus-border: #3b82f6;
+    --input-radius: 8px;
+    --input-height: 44px;
+
+    --snippet-bg: #0f172a;
+    --snippet-text: #e2e8f0;
+    --snippet-border: #334155;
+    --success-color: #10b981;
+    --btn-hover: rgba(255, 255, 255, 0.1);
+    --radius: 12px;
+}
+
 * {
     color-scheme: dark;
 }
@@ -5,6 +33,15 @@
 html,
 body {
     margin: 0;
+}
+
+button {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
 }
 
 .section-centred {
@@ -42,13 +79,17 @@ th {
     padding: 10px;
 }
 
-section {
-    clear: right;
+section:not(.left-container, .right-container) {
+    clear: both;
 }
 
 .right-container {
     float: right;
     text-align: right;
+}
+
+.left-container {
+    float: left;
 }
 
 button.squircle {
@@ -64,4 +105,181 @@ button.squircle {
         background-color: #16a085;
         cursor: pointer;
     }
+}
+
+dialog {
+    padding: 0;
+    border: none;
+    border-radius: var(--dialog-radius);
+    background: var(--dialog-bg);
+    color: var(--dialog-text);
+    box-shadow: var(--dialog-shadow);
+
+    max-width: 500px;
+    width: 90vw;
+    margin: auto;
+
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+
+    transition:
+            opacity var(--transition-speed) var(--ease-smooth),
+            transform var(--transition-speed) var(--ease-smooth),
+            overlay var(--transition-speed) var(--ease-smooth),
+            display var(--transition-speed) allow-discrete;
+}
+
+dialog::backdrop {
+    background: var(--backdrop-color);
+    backdrop-filter: blur(var(--backdrop-blur));
+    -webkit-backdrop-filter: blur(var(--backdrop-blur)); /* Safari support */
+
+    opacity: 0;
+    transition:
+            opacity var(--transition-speed) var(--ease-smooth),
+            display var(--transition-speed) allow-discrete,
+            overlay var(--transition-speed) allow-discrete;
+}
+
+dialog[open] {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+
+    transition:
+            opacity var(--transition-speed) var(--ease-smooth),
+            transform var(--transition-speed) var(--ease-spring),
+            overlay var(--transition-speed) allow-discrete,
+            display var(--transition-speed) allow-discrete;
+}
+
+dialog[open]::backdrop {
+    opacity: 1;
+}
+
+@starting-style {
+    dialog[open] {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+    }
+
+    dialog[open]::backdrop {
+        opacity: 0;
+    }
+}
+
+.dialog-content {
+    padding: 2rem;
+    font-family: system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+}
+
+.dialog-header {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    margin-left: 1.2rem;
+    padding: 0;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.dialog__closeBtn {
+    margin: 10px;
+    font-size: 1.6rem;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+select,
+textarea {
+    /* Layout & Sizing */
+    display: block;
+    width: 100%;
+    height: var(--input-height);
+    padding: 0.5rem 1rem;
+    box-sizing: border-box;
+
+    /* Typography */
+    font-family: inherit;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--input-text);
+
+    /* Visuals */
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: var(--input-radius);
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+
+    transition:
+            border-color 0.15s ease-in-out,
+            box-shadow 0.15s ease-in-out;
+
+    /* Remove default styling */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+
+.copy-snippet {
+    position: relative;
+    background: var(--snippet-bg);
+    border: 1px solid var(--snippet-border);
+    border-radius: var(--radius);
+    overflow: hidden; /* Clips the corner content */
+    box-shadow:
+            0 4px 6px -1px rgba(0, 0, 0, 0.1),
+            0 10px 15px -3px rgba(0, 0, 0, 0.2);
+    margin-bottom: 2rem;
+    max-width: 600px;
+}
+
+/* Optional "Header" like a terminal window */
+.copy-snippet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--snippet-border);
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+/* --- THE CONTENT AREA --- */
+.copy-snippet-body {
+    position: relative;
+    padding: 0;
+}
+
+.copy-snippet pre {
+    margin: 0;
+    padding: 1.25rem;
+    font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--snippet-text);
+    overflow-x: auto;
+    white-space: pre;
+
+    scrollbar-width: thin;
+    scrollbar-color: #475569 transparent;
+}
+
+pre::-webkit-scrollbar { height: 8px; }
+pre::-webkit-scrollbar-track { background: transparent; }
+pre::-webkit-scrollbar-thumb {
+    background-color: #475569;
+    border-radius: 4px;
 }

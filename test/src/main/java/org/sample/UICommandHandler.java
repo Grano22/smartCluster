@@ -16,7 +16,6 @@ import tools.jackson.databind.json.JsonMapper;
 import java.io.IOException;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.Map;
 import java.util.Set;
 
 public class UICommandHandler {
@@ -37,6 +36,7 @@ public class UICommandHandler {
 
     private sealed interface UISyncResponseData {
         record ClustersInfo(Set<Cluster> clusters) implements UISyncResponseData {}
+        record ExecutionResultDetails(ExecutionRuntime.Result result) implements UISyncResponseData {}
     }
 
     @Builder
@@ -75,8 +75,16 @@ public class UICommandHandler {
                     .orElseThrow(() -> new IllegalArgumentException("Unknown runtime: " + executeCommandUISyncCommand.runtimeName()));
 
                 var result = runtime.execute(executeCommandUISyncCommand.input());
+                var response = UISyncResponse.builder()
+                    .type("execution_result")
+                    .data(new UISyncResponseData.ExecutionResultDetails(result))
+                    .receivedAt(receivedAt)
+                    .processedAt(ZonedDateTime.now(ZoneId.of("UTC")))
+                    .requestedAt(command.requestedAt())
+                    .build()
+                ;
 
-                session.getBasicRemote().sendText(mapper.writeValueAsString(result));
+                session.getBasicRemote().sendText(mapper.writeValueAsString(response));
             }
             case UISyncCommand.QueryClusterDetails _ -> {
                 var response = UISyncResponse.builder()

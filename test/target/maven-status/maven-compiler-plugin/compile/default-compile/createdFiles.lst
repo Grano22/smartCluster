@@ -14,6 +14,7 @@ org/sample/UdpServer.class
 org/sample/UICommandHandler$UISyncResponse.class
 org/sample/UICommandHandler.class
 org/sample/jmh_generated/MyBenchmark_jmhType_B2.class
+org/sample/UICommandHandler$UISyncResponseData$ExecutionResultDetails.class
 org/sample/UIServeEndpoint.class
 org/sample/UIJob$1.class
 org/sample/NodeConfig$ClusterSettingsForNode.class

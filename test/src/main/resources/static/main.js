@@ -54,12 +54,144 @@ class DataTable extends HTMLElement {
 
 customElements.define('data-table', DataTable);
 
+class EmittedEvent extends CustomEvent {
+    #originalEvent;
+    #currentTarget;
+    #target;
+
+    /** @returns {Event} */
+    get originalEvent() {
+        return this.#originalEvent;
+    }
+
+    get currentTarget() {
+        return this.#currentTarget;
+    }
+
+    get target() {
+        return this.#target;
+    }
+
+    constructor(type, originalEvent, detail) {
+        super(type, { detail, bubbles: false, composed: true });
+
+        this.#originalEvent = originalEvent;
+        this.#currentTarget = originalEvent.currentTarget;
+        this.#target = originalEvent.target;
+    }
+}
+
+const eventBus = new EventTarget();
+window.$emit = (eventName, event, data) => {
+    console.log(this, event, event.currentTarget, event.target);
+    console.log(eventName, data);
+
+    eventBus.dispatchEvent(new EmittedEvent(eventName, event, data));
+};
+
+const clusterDetailsEntries = [];
+
+class CommandExecutionDialogController {
+    /** @type {HTMLDialogElement} **/
+    #dialog;
+
+    /** @type {HTMLFormElement} **/
+    #dialogForm;
+
+    #executionStatusCode;
+    #executionResult;
+
+    constructor(websocket) {
+        this.#dialog = document.getElementById('commandExecutionDialog');
+        this.#dialogForm = this.#dialog.querySelector('form');
+        this.#executionStatusCode = this.#dialog.querySelector('#execution__statusCode');
+        this.#executionResult = this.#dialog.querySelector('#execution__output');
+
+        this.#dialogForm.addEventListener('submit', (evt) => {
+            evt.preventDefault();
+            const formData = new FormData(evt.currentTarget);
+
+            console.log(Array.from(formData.entries()));
+            console.log({
+                type: "execute_command",
+                requestedAt: new Date().toISOString(),
+                runtimeName: formData.get('runtimeName'),
+                input: {
+                    command: formData.get('command'),
+                    positionalArguments: [],
+                    options: {}
+                }
+            });
+
+            websocket.send(JSON.stringify({
+                type: "execute_command",
+                requestedAt: new Date().toISOString(),
+                runtimeName: formData.get('runtimeName'),
+                input: {
+                    command: formData.get('command'),
+                    positionalArguments: [],
+                    options: {}
+                }
+            }))
+        });
+        this.#dialog.querySelector('.dialog__closeBtn')
+            .addEventListener('click', () => this.close())
+        ;
+    }
+
+    updateOutput(statusCode, output) {
+        if (!this.#dialog.open) {
+            return;
+        }
+
+        this.#executionStatusCode.textContent = statusCode;
+        this.#executionResult.textContent = output;
+    }
+
+    showFor(node) {
+        //this.#dialogForm.elements.namedItem('nodeAddress').value = node.address;
+
+        const runtimeSelect = this.#dialogForm.elements.namedItem('runtimeName');
+        runtimeSelect.replaceChildren();
+        for (const runtime of node.supportedRuntimes) {
+            const option = document.createElement('option');
+            option.value = runtime;
+            option.textContent = runtime;
+            runtimeSelect.appendChild(option);
+        }
+
+        this.#dialog.showModal();
+    }
+
+    close() {
+        this.#dialogForm.reset();
+        this.#executionStatusCode.textContent = '';
+        this.#executionResult.textContent = '';
+        this.#dialog.close();
+    }
+}
+
 window.addEventListener("load", (wevt) => {
     /** @type {DataTable} dataTable **/
     const dataTable = document.getElementById('clustersNodes');
     const lastSyncNode = document.getElementById('lastClusterSyncDate');
     const resyncButton = document.getElementById('resyncButton');
     const websocket = new WebSocket(`ws://${location.host || '127.0.0.1:8080'}/view/updates`);
+    const commandExecutionDialogController = new CommandExecutionDialogController(websocket);
+
+    eventBus.addEventListener('executeOnNode', (evt) => {
+        if (websocket.readyState !== WebSocket.OPEN) {
+            alert('Connection with server is not established. Try again later.');
+
+            return;
+        }
+
+        const target = evt.currentTarget;
+        const index = target.closest('tr').sectionRowIndex;
+        const entryData = clusterDetailsEntries[index];
+
+        commandExecutionDialogController.showFor(entryData);
+    });
 
     resyncButton.addEventListener("click", (evt) => {
         if (websocket.readyState !== WebSocket.OPEN) {
@@ -87,32 +219,42 @@ window.addEventListener("load", (wevt) => {
     console.log("Received message", socketEvent);
 
     const incomingEvent = JSON.parse(socketEvent.data);
+        console.log(incomingEvent, "time to handle it");
 
     switch (incomingEvent.type) {
       case "cluster_details":
           lastSyncNode.textContent = incomingEvent.processedAt;
+          clusterDetailsEntries.splice(0, clusterDetailsEntries.length);
 
-          console.log(incomingEvent, "time to handle it");
           const entries = [];
-
           for (const cluster of incomingEvent.data.clusters) {
-             for (const node of cluster.nodes) {
-                 entries.push({
-                     name: cluster.name,
-                     address: `${node.hostname}`,
-                     tasks: ``,
-                     last_heartbeat: node.lastHeartbeat,
-                     trip_time: node.lastTrip
-                 });
-             }
+                for (const node of cluster.nodes) {
+                     entries.push({
+                         name: cluster.name,
+                         address: `${node.hostname}`,
+                         tasks: ``,
+                         last_heartbeat: node.lastHeartbeat,
+                         trip_time: node.lastTrip,
+                         supportedRuntimes: node.supportedRuntimes.join(', ')
+                     });
+
+                    clusterDetailsEntries.push({
+                        ...node,
+                        clusterName: cluster.name
+                    });
+                }
           }
 
           dataTable.setEntries(entries);
+          break;
+        case "execution_result":
+            commandExecutionDialogController.updateOutput(incomingEvent.data.result.statusCode, incomingEvent.data.result.output);
+            console.log(incomingEvent);
     }
     });
 
     websocket.addEventListener("error", (socketEvent) => {
-    console.error(socketEvent);
+        console.error(socketEvent);
     });
 
     websocket.addEventListener("close", (socketEvent) => {});
