@@ -37,6 +37,7 @@ body {
 
 button {
     padding: 10px 20px;
+    margin: 10px;
     border-radius: 8px;
     border: none;
     cursor: pointer;
@@ -271,10 +272,13 @@ textarea {
     line-height: 1.6;
     color: var(--snippet-text);
     overflow-x: auto;
-    white-space: pre;
+    white-space: pre-wrap;
 
     scrollbar-width: thin;
     scrollbar-color: #475569 transparent;
+
+    word-break: break-word;
+    max-width: 100%;
 }
 
 pre::-webkit-scrollbar { height: 8px; }

@@ -17,7 +17,7 @@ public final class LanguageExpressionExecutionRuntime implements ExecutionRuntim
             if (statements.isEmpty()) return new Result(1, "No statements provided");
 
             Expression expression = parser.parseExpression(statements);
-            String result = (String) expression.getValue();
+            String result =  expression.getValue(String.class);
 
             return new Result(0, result != null ? result : "null");
         } catch (Exception e) {
