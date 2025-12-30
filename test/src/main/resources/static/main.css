@@ -9,6 +9,9 @@ body {
 
 .section-centred {
     margin: 10px auto;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
 }
 
 table {
@@ -26,15 +29,39 @@ tbody {
     }
 
     tr:nth-child(odd) {
-        background-color: #55efc4;
+        background-color: #1abc9c;
     }
 }
 
 tr {
-    background-color: #00b894;
+    background-color: #16a085;
 }
 
 td,
 th {
     padding: 10px;
+}
+
+section {
+    clear: right;
+}
+
+.right-container {
+    float: right;
+    text-align: right;
+}
+
+button.squircle {
+    background-color: #218c74;
+    border: none;
+    border-radius: 120px;
+    corner-shape: squircle;
+    padding: 10px 15px;
+    font-size: 18px;
+    margin: 10px;
+
+    &:hover {
+        background-color: #16a085;
+        cursor: pointer;
+    }
 }

@@ -1,8 +1,3 @@
-const text = await fetch('/main.css').then(r => r.text());
-
-const sharedSheet = new CSSStyleSheet();
-sharedSheet.replaceSync(text);
-
 class DataTable extends HTMLElement {
     #ROW_TEMPLATE;
     #tbody;
@@ -10,7 +5,6 @@ class DataTable extends HTMLElement {
 
     constructor() {
         super();
-        this.shadowRoot.adoptedStyleSheets = [sharedSheet];
         this.#ROW_TEMPLATE = this.shadowRoot.host.querySelector('template#row-template');
         this.removeChild(this.#ROW_TEMPLATE);
         this.#tbody = this.shadowRoot.querySelector('tbody');
@@ -64,15 +58,29 @@ window.addEventListener("load", (wevt) => {
     /** @type {DataTable} dataTable **/
     const dataTable = document.getElementById('clustersNodes');
     const lastSyncNode = document.getElementById('lastClusterSyncDate');
+    const resyncButton = document.getElementById('resyncButton');
     const websocket = new WebSocket(`ws://${location.host || '127.0.0.1:8080'}/view/updates`);
 
-    websocket.addEventListener("open", (socketEvent) => {
-    console.log("Synchronization is enabled", socketEvent);
+    resyncButton.addEventListener("click", (evt) => {
+        if (websocket.readyState !== WebSocket.OPEN) {
+            alert('Connection with server is not established. Try again later.');
 
-    websocket.send(JSON.stringify({
-        type: "query_cluster_details",
-        requestedAt: new Date().toISOString()
-    }));
+            return;
+        }
+
+        websocket.send(JSON.stringify({
+            type: "query_cluster_details",
+            requestedAt: new Date().toISOString()
+        }));
+    });
+
+    websocket.addEventListener("open", (socketEvent) => {
+        console.log("Synchronization is enabled", socketEvent);
+
+        websocket.send(JSON.stringify({
+            type: "query_cluster_details",
+            requestedAt: new Date().toISOString()
+        }));
     });
 
     websocket.addEventListener("message", (socketEvent) => {

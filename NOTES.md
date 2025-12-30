@@ -1,4 +1,0 @@
-Project AI
-===
-
-* Zbiór Treningowy

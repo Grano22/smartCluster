@@ -6,16 +6,20 @@
         <link rel="stylesheet" type="text/css" href="main.css" />
     </head>
     <body>
-        <h1>Clusters Management</h1>
-
         <section class="section-centred">
-            <button>Refresh</button>
-            <time id="lastClusterSyncDate">(not synced)</time>
+            <h1>Clusters Management</h1>
         </section>
 
         <section class="section-centred">
+            <section class="right-container">
+                <button id="resyncButton" class="squircle" aria-label="Refresh">🔄</button>
+                <time id="lastClusterSyncDate">(not synced)</time>
+            </section>
+
             <data-table id="clustersNodes">
                 <template shadowrootmode="open">
+                    <link rel="stylesheet" type="text/css" href="main.css" />
+
                     <table>
                         <caption>Clusters</caption>
                         <thead>
@@ -39,7 +43,7 @@
                         <td><!--@ tasks @--></td>
                         <td><!--@ last_heartbeat @--></td>
                         <td><!--@ trip_time @--></td>
-                        <td></td>
+                        <td><button class="execute-on-node">Execute</button></td>
                     </tr>
                 </template>
             </data-table>

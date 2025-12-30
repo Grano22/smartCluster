@@ -1,12 +1,15 @@
 package org.sample;
 
+import lombok.SneakyThrows;
+import org.sample.runtime.CommandLineExecutionRuntime;
+import org.sample.runtime.ExecutionRuntime;
+import org.sample.runtime.LanguageExpressionExecutionRuntime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.simple.SimpleLogger;
 
 import java.nio.file.Path;
-import java.util.Optional;
-import java.util.Properties;
+import java.util.*;
 
 public class App {
     static {
@@ -32,11 +35,32 @@ public class App {
         );
         NodesMeshManager nodesMeshManager = NodesMeshManager.initMeshFromConfig(config);
 
-        Thread uiJob = new Thread(new UIJob(config.webPort(), nodesMeshManager));
+        var cliHandler = new CommandLineExecutionRuntime("Program", input -> {
+            switch (input.command()) {
+                case "info" -> {
+
+                }
+                case "shutdown" -> System.exit(0);
+            }
+
+            return new ExecutionRuntime.Result(0, "Invalid command");
+        });
+        var runtimeHandlers = Set.of(cliHandler, new LanguageExpressionExecutionRuntime());
+        var uiCommandHandler = new UICommandHandler(nodesMeshManager, runtimeHandlers);
+
+        Thread uiJob = new Thread(new UIJob(config.webPort(), uiCommandHandler::handleMessage));
         uiJob.start();
 
         logger.info("Cluster started, ready to act");
 
-        uiJob.join();
+        var scanner = new Scanner(System.in);
+        do {
+            System.out.print("> ");
+            String input = scanner.nextLine();
+            var result = cliHandler.execute(new ExecutionRuntime.Input(input));
+
+            System.out.println("Status Code: " + result.statusCode());
+            System.out.println("\nMessage: \n" + result.result());
+        } while (true);
     }
 }
