@@ -72,9 +72,14 @@ public final class NodesMeshManager {
     public boolean hasInCluster(Cluster cluster, ClusterNode node) {
         WeakReference<Cluster> clusterRef = clusterNodesCache.get(cluster.name());
 
-        if (clusterRef == null) return false;
+        if (clusterRef == null) {
+            return false;
+        }
+
         Cluster clusterPointer = clusterRef.get();
-        if (clusterPointer == null) return false;
+        if (clusterPointer == null) {
+            return false;
+        }
 
         return clusterPointer.nodes().contains(node);
     }

@@ -12,9 +12,8 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
-import java.util.HashMap;
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
@@ -49,32 +48,40 @@ public class AlivenessCollector implements Runnable {
         while (running && !Thread.currentThread().isInterrupted()) {
             try {
                 socket.receive(packet);
+                String rawJson = new String(packet.getData(), StandardCharsets.UTF_8);
+                String cleanJson = rawJson.replace("\u0000", "");
+                logger.info("Received heartbeat from {}:{}, {}", packet.getAddress(), packet.getPort(), cleanJson);
+                HeartbeatJob.Heartbeat heartbeat = mapper.readValue(cleanJson, HeartbeatJob.Heartbeat.class);
 
-                ByteArrayInputStream bis = new ByteArrayInputStream(packet.getData(), 0, packet.getLength());
-                HeartbeatJob.Heartbeat heartbeat = mapper.readValue(bis, HeartbeatJob.Heartbeat.class);
+                if (heartbeat.clusters() != null) {
+                    Set<Cluster> commonClusters = new HashSet<>(heartbeat.clusters());
+                    commonClusters.retainAll(meshManager.getClusters());
 
-                Set<Cluster> commonClusters = new HashSet<>(heartbeat.clusters());
-                commonClusters.retainAll(meshManager.getClusters());
+//                Set<Cluster> clustersMissing = new HashSet<>(heartbeat.clusters());
+//                clustersMissing.removeAll(commonClusters);
 
-                Set<Cluster> clustersMissing = new HashSet<>(heartbeat.clusters());
-                clustersMissing.removeAll(commonClusters);
+                    System.out.println(mapper.writeValueAsString(meshManager.getClusters()));
 
-                for (var cluster: commonClusters) {
-                    for (var node: cluster.nodes()) {
-                        if (meshManager.hasInCluster(cluster, node)) {
-                            continue;
+                    for (var cluster : commonClusters) {
+                        for (var node : cluster.nodes()) {
+                            if (meshManager.hasInCluster(cluster, node)) {
+                                continue;
+                            }
+
+                            meshManager.setNodeDiscovered(node.hostname() + ":" + node.heartbeatPort());
+                            meshManager.addNodeToCluster(cluster, node);
+                            logger.info("Node {} discovered in cluster {}", node, cluster);
                         }
-
-                        meshManager.setNodeDiscovered(node.hostname() + ":" + node.heartbeatPort());
-                        meshManager.addNodeToCluster(cluster, node);
                     }
+
+                    // TODO: Do we need to know about clusters that this server is not connected?
+                    //meshManager.addClusters(clustersMissing);
+
+                    System.out.println(mapper.writeValueAsString(meshManager.getClusters()));
+
+                    packet.setLength(buffer.length);
                 }
-
-                // TODO: Do we need to know about clusters that this server is not connected?
-                //meshManager.addClusters(clustersMissing);
-
-                packet.setLength(buffer.length);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.atError()
                     .addMarker(contextMarker)
                     .setCause(e)

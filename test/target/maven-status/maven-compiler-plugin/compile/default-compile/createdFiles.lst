@@ -10,6 +10,7 @@ org/sample/UISyncEndpoint.class
 org/sample/jmh_generated/MyBenchmark_testMethod_jmhTest.class
 org/sample/UICommandHandler$UISyncResponseData$ClustersInfo.class
 META-INF/BenchmarkList
+org/sample/optimizations/SingleCPURegisterHostsFilter.class
 org/sample/NodeConfigLoader.class
 org/sample/runtime/CommandLineExecutionRuntime.class
 org/sample/UICommandHandler$UISyncResponse.class

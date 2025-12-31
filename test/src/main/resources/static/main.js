@@ -219,7 +219,6 @@ window.addEventListener("load", (wevt) => {
     console.log("Received message", socketEvent);
 
     const incomingEvent = JSON.parse(socketEvent.data);
-        console.log(incomingEvent, "time to handle it");
 
     switch (incomingEvent.type) {
       case "cluster_details":
@@ -231,7 +230,7 @@ window.addEventListener("load", (wevt) => {
                 for (const node of cluster.nodes) {
                      entries.push({
                          name: cluster.name,
-                         address: `${node.hostname}`,
+                         address: `${node.hostname}:${node.communicationPort}`,
                          tasks: ``,
                          last_heartbeat: node.lastHeartbeat,
                          trip_time: node.lastTrip,
@@ -249,7 +248,6 @@ window.addEventListener("load", (wevt) => {
           break;
         case "execution_result":
             commandExecutionDialogController.updateOutput(incomingEvent.data.result.statusCode, incomingEvent.data.result.output);
-            console.log(incomingEvent);
     }
     });
 

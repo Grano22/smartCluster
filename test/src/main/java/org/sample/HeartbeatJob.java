@@ -118,22 +118,20 @@ public class HeartbeatJob {
         Set<ClusterNode> visitedNodes = new HashSet<>();
         for (var cluster: meshManager.getClusters()) {
             for (var node: cluster.nodes()) {
-                if (visitedNodes.contains(node)) {
+                if (visitedNodes.contains(node) || meshManager.getSelf().equals(node)) {
                     continue;
                 }
-
 
                 visitedNodes.add(node);
             }
         }
 
+        // TODO: Change to withCluster false to save bandwidth
         runOnce(
             visitedNodes.stream()
-                //.map(node -> node.hostname() + ":" + node.heartbeatPort())
                 .map(node -> new InetSocketAddress(node.hostname(), node.heartbeatPort()))
                 .collect(Collectors.toSet()),
-            false
-        )
-        ; //visitedNodes.toArray(ClusterNode[]::new)
+            true
+        );
     }
 }

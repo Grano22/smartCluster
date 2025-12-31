@@ -1,0 +1,13 @@
+{
+    "host": "localhost",
+    "tcpPort": 9011,
+    "webPort": 9012,
+    "heartbeatPort": 9013,
+    "heartbeatProbingPeriod": 1000,
+    "discoveryNodes": [],
+    "clusters": [
+        {
+            "name": "Main"
+        }
+    ]
+}
