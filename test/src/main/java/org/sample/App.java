@@ -10,6 +10,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.Executors;
 
 public class App {
     static {
@@ -49,8 +50,19 @@ public class App {
         var runtimeHandlers = Set.of(cliHandler, new LanguageExpressionExecutionRuntime());
         var uiCommandHandler = new UICommandHandler(nodesMeshManager, runtimeHandlers);
 
-        Thread uiJob = new Thread(new UIJob(config.webPort(), uiCommandHandler::handleMessage));
+        var uiJob = new Thread(new UIJob(config.webPort(), uiCommandHandler::handleMessage));
         uiJob.start();
+
+        var heartBeatJob = new HeartbeatJob(config.nodesToDiscover(), nodesMeshManager);
+        heartBeatJob.runForDiscoverableNodes();
+        heartBeatJob.run();
+
+        var alivenessCollector = new AlivenessCollector(
+            config.heartbeatPort(),
+            Executors.newVirtualThreadPerTaskExecutor(),
+            nodesMeshManager
+        );
+        alivenessCollector.start();
 
         logger.info("Cluster started, ready to act");
 

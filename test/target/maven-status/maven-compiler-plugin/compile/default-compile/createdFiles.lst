@@ -1,16 +1,17 @@
+org/sample/HeartbeatJob$Heartbeat.class
 META-INF/CompilerHints
 org/sample/jmh_generated/MyBenchmark_jmhType_B1.class
 org/sample/NodeConfig.class
 org/sample/MyBenchmark.class
 org/sample/UIJob.class
 org/sample/UICommandHandler$UISyncCommand.class
+org/sample/HeartbeatJob.class
 org/sample/UISyncEndpoint.class
 org/sample/jmh_generated/MyBenchmark_testMethod_jmhTest.class
 org/sample/UICommandHandler$UISyncResponseData$ClustersInfo.class
 META-INF/BenchmarkList
 org/sample/NodeConfigLoader.class
 org/sample/runtime/CommandLineExecutionRuntime.class
-org/sample/UdpServer.class
 org/sample/UICommandHandler$UISyncResponse.class
 org/sample/UICommandHandler.class
 org/sample/jmh_generated/MyBenchmark_jmhType_B2.class
@@ -19,6 +20,7 @@ org/sample/UIServeEndpoint.class
 org/sample/UIJob$1.class
 org/sample/NodeConfig$ClusterSettingsForNode.class
 org/sample/TcpServer.class
+org/sample/AlivenessCollector.class
 org/sample/runtime/ExecutionRuntime$Input.class
 org/sample/UICommandHandler$UISyncCommand$ExecuteCommand.class
 org/sample/Cluster.class

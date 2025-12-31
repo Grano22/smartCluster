@@ -25,6 +25,7 @@ public final class UIJob implements Runnable {
         this.messageHandler = messageHandler;
     }
 
+    @Override
     public void run() {
         try {
             logger.info("Starting UIJob Server...");
