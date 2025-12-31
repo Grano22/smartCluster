@@ -65,11 +65,13 @@ public class AlivenessCollector implements Runnable {
                             continue;
                         }
 
+                        meshManager.setNodeDiscovered(node.hostname() + ":" + node.heartbeatPort());
                         meshManager.addNodeToCluster(cluster, node);
                     }
                 }
 
-                meshManager.addClusters(clustersMissing);
+                // TODO: Do we need to know about clusters that this server is not connected?
+                //meshManager.addClusters(clustersMissing);
 
                 packet.setLength(buffer.length);
             } catch (IOException e) {

@@ -16,7 +16,9 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class HeartbeatJob {
@@ -29,13 +31,11 @@ public class HeartbeatJob {
     private final static Marker contextMarker = MarkerFactory.getMarker("Heartbeat-Job");
     private final static Logger logger = LoggerFactory.getLogger(HeartbeatJob.class);
 
-    private final @NonNull Set<String> discoverableNodes;
     private final @NonNull NodesMeshManager meshManager;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private final JsonMapper mapper = JsonMapper.shared();
 
-    public HeartbeatJob(final @NonNull Set<String> discoverableNodes, @NonNull final NodesMeshManager meshManager) throws SocketException {
-        this.discoverableNodes = discoverableNodes;
+    public HeartbeatJob(@NonNull final NodesMeshManager meshManager) {
         this.meshManager = meshManager;
     }
 
@@ -86,15 +86,32 @@ public class HeartbeatJob {
 
     public void runForDiscoverableNodes() {
         runOnce(
-             discoverableNodes.stream()
+             meshManager.getDiscoverableNodes().stream()
                  .map(node -> {
                      var parts = node.split(":");
                      return new InetSocketAddress(parts[0], Integer.parseInt(parts[1]));
                  })
                  .collect(Collectors.toSet()),
                 true
-        )
-        ;
+        );
+
+        AtomicReference<ScheduledFuture<?>> futureHolder = new AtomicReference<>();
+        ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(() -> {
+            Set<InetSocketAddress> rest = meshManager.getAllNotDiscoveredNodes().stream()
+                .map(node -> {
+                    var parts = node.split(":");
+                    return new InetSocketAddress(parts[0], Integer.parseInt(parts[1]));
+                })
+                .collect(Collectors.toSet())
+            ;
+
+            if (futureHolder.get() != null && rest.isEmpty()) {
+                futureHolder.get().cancel(false);
+            }
+
+            runOnce(rest, true);
+        }, 5, 5, TimeUnit.SECONDS);
+        futureHolder.set(future);
     }
 
     public void runForAlreadyKnownNodes() {

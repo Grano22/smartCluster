@@ -1,6 +1,8 @@
 package org.sample;
 
 import lombok.Getter;
+import lombok.NonNull;
+import org.sample.optimizations.SingleCPURegisterHostsFilter;
 import org.sample.runtime.LanguageExpressionExecutionRuntime;
 
 import java.lang.ref.WeakReference;
@@ -13,7 +15,10 @@ public final class NodesMeshManager {
     @Getter
     private final Set<Cluster> clusters = ConcurrentHashMap.newKeySet();
     @Getter
-    private final ClusterNode self;
+    private final @NonNull ClusterNode self;
+    @Getter
+    private final @NonNull Set<String> discoverableNodes;
+    private @NonNull SingleCPURegisterHostsFilter discoverableNodesStatus;
 
     //private final Map<Cluster, Set<ClusterNode>> clusterNodesCache = Collections.synchronizedMap(new WeakHashMap<>());
     private final Map<String, WeakReference<Cluster>> clusterNodesCache = new ConcurrentHashMap<>();
@@ -33,17 +38,25 @@ public final class NodesMeshManager {
             nodeSettings.clusterSettingsForNode()
                 .stream()
                 .map(settings -> new Cluster(settings.clusterName(), Set.of(selfNode)))
-                .collect(Collectors.toSet())
+                .collect(Collectors.toSet()),
+            nodeSettings.nodesToDiscover()
         );
     }
 
-    public NodesMeshManager(ClusterNode self, Set<Cluster> clusters) {
+    public NodesMeshManager(
+        final @NonNull ClusterNode self,
+        final @NonNull Set<Cluster> clusters,
+        final @NonNull Set<String> discoverableNodes
+    ) {
         this.self = self;
         this.clusters.addAll(clusters);
 
         for (var cluster : clusters) {
             clusterNodesCache.put(cluster.name(), new WeakReference<>(cluster));
         }
+
+        this.discoverableNodes = discoverableNodes;
+        this.discoverableNodesStatus = new SingleCPURegisterHostsFilter(discoverableNodes, "UNKNOWN");
     }
 
     public void addCluster(Cluster cluster) {
@@ -87,5 +100,21 @@ public final class NodesMeshManager {
 
             return new WeakReference<>(newCluster);
         });
+    }
+
+    public void setNodeDiscovered(String host) {
+        discoverableNodesStatus.update(host, "OK");
+    }
+
+    public void setNodeAsNotHealthy(String host) {
+        discoverableNodesStatus.update(host, "DOWN");
+    }
+
+    public boolean isNodeHealthy(String host) {
+        return discoverableNodesStatus.getStatus(host).equals("OK");
+    }
+
+    public Set<String> getAllNotDiscoveredNodes() {
+        return discoverableNodes.stream().filter(node -> !isNodeHealthy(node)).collect(Collectors.toSet());
     }
 }

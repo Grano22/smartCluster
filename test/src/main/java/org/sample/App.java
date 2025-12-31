@@ -53,7 +53,7 @@ public class App {
         var uiJob = new Thread(new UIJob(config.webPort(), uiCommandHandler::handleMessage));
         uiJob.start();
 
-        var heartBeatJob = new HeartbeatJob(config.nodesToDiscover(), nodesMeshManager);
+        var heartBeatJob = new HeartbeatJob(nodesMeshManager);
         heartBeatJob.runForDiscoverableNodes();
         heartBeatJob.run();
 
