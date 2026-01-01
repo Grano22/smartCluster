@@ -13,6 +13,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 public final class RemoteExecutionDelegator {
     private final static Marker contextMarker = MarkerFactory.getMarker("RemoteExecutionDelegator");
@@ -35,8 +36,6 @@ public final class RemoteExecutionDelegator {
                 String rawRequest = mapper.writeValueAsString(delegation);
                 writer.println(rawRequest);
 
-                logger.atInfo().log("Delegation completed {}", rawRequest);
-
                 return mapper.readValue(reader, RemoteExecutionSummary.class);
             } catch (Exception e) {
                 logger.atError()
@@ -47,6 +46,6 @@ public final class RemoteExecutionDelegator {
 
                 throw new RuntimeException(e);
             }
-        });
+        }).orTimeout(40, TimeUnit.SECONDS);
     }
 }

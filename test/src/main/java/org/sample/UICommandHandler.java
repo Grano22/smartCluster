@@ -10,6 +10,7 @@ import org.sample.clustermanagement.Cluster;
 import org.sample.clustermanagement.NodesMeshManager;
 import org.sample.remoteexecution.ExecutionDelegation;
 import org.sample.remoteexecution.RemoteExecutionDelegator;
+import org.sample.remoteexecution.RemoteExecutionSummary;
 import org.sample.runtime.ExecutionRuntime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +20,9 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeoutException;
 
 public class UICommandHandler {
     @JsonTypeInfo(
@@ -85,6 +88,7 @@ public class UICommandHandler {
         switch (command) {
             case UISyncCommand.ExecuteCommand executeCommandUISyncCommand -> {
                 ExecutionRuntime.Result result = handleExecution(executeCommandUISyncCommand);
+                logger.atInfo().log("Execution result: {}", mapper.writeValueAsString(result));
 
                 var response = UISyncResponse.builder()
                     .type("execution_result")
@@ -123,11 +127,35 @@ public class UICommandHandler {
             return handleLocalExecution(executeCommandUISyncCommand);
         }
 
-        return delegator.delegate(
+        var summary = delegator.delegate(
             executeCommandUISyncCommand.targetHostname,
             executeCommandUISyncCommand.targetPort,
             new ExecutionDelegation(executeCommandUISyncCommand.runtimeName, executeCommandUISyncCommand.input)
-        ).join().result();
+        )
+            .exceptionally(e -> {
+                String reasonMessage = "Failed to delegate execution, unknown reason";
+
+                if (e instanceof TimeoutException) {
+                    reasonMessage = "Failed to delegate execution, timeout";
+                }
+
+                logger
+                    .atError()
+                    .addMarker(contextMarker)
+                    .setCause(e)
+                    .log(reasonMessage)
+                ;
+
+                return new RemoteExecutionSummary(
+                    new ExecutionRuntime.Result(1, reasonMessage)
+                );
+            })
+            .join()
+        ;
+
+        logger.atInfo().log("Execution result: {}", mapper.writeValueAsString(summary.result()));
+
+        return summary.result();
     }
 
     private @NonNull ExecutionRuntime.Result handleLocalExecution(@NonNull UISyncCommand.ExecuteCommand executeCommandUISyncCommand) {

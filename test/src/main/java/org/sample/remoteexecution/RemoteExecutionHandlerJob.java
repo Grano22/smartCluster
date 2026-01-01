@@ -70,6 +70,8 @@ public final class RemoteExecutionHandlerJob implements Runnable {
                             ;
                             writer.println(mapper.writeValueAsString(summary));
                             writer.flush();
+
+                            break;
                         }
                     } catch (IOException exception) {
                         logger.atError()
