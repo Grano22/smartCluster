@@ -18,6 +18,7 @@
             <artifactId>jmh-core</artifactId>
             <version>${jmh.version}</version>
         </dependency>
+
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-generator-annprocess</artifactId>
@@ -36,12 +37,6 @@
             <artifactId>jetty-ee10-servlet</artifactId>
             <version>12.1.5</version>
         </dependency>
-
-        <!-- <dependency>
-          <groupId>org.eclipse.jetty.websocket</groupId>
-          <artifactId>websocket-jetty-server</artifactId>
-          <version>11.0.26</version>
-        </dependency> -->
 
         <dependency>
             <groupId>org.eclipse.jetty.ee10.websocket</groupId>
@@ -98,7 +93,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jmh.version>1.37</jmh.version>
         <javac.target>25</javac.target>
-        <uberjar.name>benchmarks</uberjar.name>
+        <uberjar.name>node-cluster</uberjar.name>
+        <benchmark.uberjar.name>benchmarks</benchmark.uberjar.name>
     </properties>
 
     <build>
@@ -128,37 +124,30 @@
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.6.1</version>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>4.0.1</version>
                 <executions>
                     <execution>
-                        <phase>package</phase>
+                        <id>repackage-app</id>
                         <goals>
-                            <goal>shade</goal>
+                            <goal>repackage</goal>
                         </goals>
                         <configuration>
+                            <mainClass>org.sample.App</mainClass>
                             <finalName>${uberjar.name}</finalName>
-                            <transformers>
-                                <transformer
-                                    implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"
-                                >
-                                    <mainClass>org.openjdk.jmh.Main</mainClass>
-                                </transformer>
-                                <transformer
-                                    implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"
-                                />
-                            </transformers>
-                            <filters>
-                                <filter>
-                                    <artifact>*:*</artifact>
-                                    <excludes>
-                                        <exclude>META-INF/*.SF</exclude>
-                                        <exclude>META-INF/*.DSA</exclude>
-                                        <exclude>META-INF/*.RSA</exclude>
-                                    </excludes>
-                                </filter>
-                            </filters>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>repackage-benchmarks</id>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                        <configuration>
+                            <classifier>benchmarks</classifier>
+                            <mainClass>org.openjdk.jmh.Main</mainClass>
+                            <finalName>${benchmark.uberjar.name}</finalName>
                         </configuration>
                     </execution>
                 </executions>
@@ -186,8 +175,6 @@
                             <manifest>
                                 <mainClass>org.sample.App</mainClass>
                             </manifest>
-                            <manifestFile
-                            >src/main/java/org/sample/resources/META-INF/MANIFEST.MF</manifestFile>
                         </archive>
                     </configuration>
                 </plugin>
