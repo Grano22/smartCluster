@@ -6,6 +6,10 @@ import jakarta.websocket.Session;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.SneakyThrows;
+import org.sample.clustermanagement.Cluster;
+import org.sample.clustermanagement.NodesMeshManager;
+import org.sample.remoteexecution.ExecutionDelegation;
+import org.sample.remoteexecution.RemoteExecutionDelegator;
 import org.sample.runtime.ExecutionRuntime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +17,6 @@ import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 import tools.jackson.databind.json.JsonMapper;
 
-import java.io.IOException;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Set;
@@ -29,7 +32,13 @@ public class UICommandHandler {
         record QueryClusterDetails(@NonNull ZonedDateTime requestedAt) implements UISyncCommand {}
 
         @JsonTypeName("execute_command")
-        record ExecuteCommand(@NonNull String runtimeName, @NonNull ExecutionRuntime.Input input, ZonedDateTime requestedAt) implements UISyncCommand {}
+        record ExecuteCommand(
+            @NonNull String targetHostname,
+            int targetPort,
+            @NonNull String runtimeName,
+            @NonNull ExecutionRuntime.Input input,
+            ZonedDateTime requestedAt
+        ) implements UISyncCommand {}
 
         ZonedDateTime requestedAt();
     }
@@ -56,10 +65,16 @@ public class UICommandHandler {
         .build();
     private final Set<ExecutionRuntime> runtimes;
     private final NodesMeshManager meshManager;
+    private final RemoteExecutionDelegator delegator;
 
-    public UICommandHandler(final NodesMeshManager meshManager, final Set<ExecutionRuntime> runtimes) {
+    public UICommandHandler(
+        final @NonNull NodesMeshManager meshManager,
+        final @NonNull Set<ExecutionRuntime> runtimes,
+        final @NonNull RemoteExecutionDelegator delegator
+    ) {
         this.meshManager = meshManager;
         this.runtimes = runtimes;
+        this.delegator = delegator;
     }
 
     @SneakyThrows
@@ -69,12 +84,8 @@ public class UICommandHandler {
 
         switch (command) {
             case UISyncCommand.ExecuteCommand executeCommandUISyncCommand -> {
-                var runtime = runtimes.stream()
-                    .filter(r -> r.name().equals(executeCommandUISyncCommand.runtimeName()))
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("Unknown runtime: " + executeCommandUISyncCommand.runtimeName()));
+                ExecutionRuntime.Result result = handleExecution(executeCommandUISyncCommand);
 
-                var result = runtime.execute(executeCommandUISyncCommand.input());
                 var response = UISyncResponse.builder()
                     .type("execution_result")
                     .data(new UISyncResponseData.ExecutionResultDetails(result))
@@ -102,5 +113,30 @@ public class UICommandHandler {
                     .log("Client tried to perform unsupported operation {}", message)
             ;
         }
+    }
+
+    private @NonNull ExecutionRuntime.Result handleExecution(@NonNull UISyncCommand.ExecuteCommand executeCommandUISyncCommand) {
+        if (
+            executeCommandUISyncCommand.targetHostname().equals(meshManager.getSelf().hostname()) &&
+            executeCommandUISyncCommand.targetPort() == meshManager.getSelf().communicationPort()
+        ) {
+            return handleLocalExecution(executeCommandUISyncCommand);
+        }
+
+        return delegator.delegate(
+            executeCommandUISyncCommand.targetHostname,
+            executeCommandUISyncCommand.targetPort,
+            new ExecutionDelegation(executeCommandUISyncCommand.runtimeName, executeCommandUISyncCommand.input)
+        ).join().result();
+    }
+
+    private @NonNull ExecutionRuntime.Result handleLocalExecution(@NonNull UISyncCommand.ExecuteCommand executeCommandUISyncCommand) {
+        var runtime = runtimes.stream()
+                .filter(r -> r.name().equals(executeCommandUISyncCommand.runtimeName()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Unknown runtime: " + executeCommandUISyncCommand.runtimeName()));
+
+
+        return runtime.execute(executeCommandUISyncCommand.input());
     }
 }

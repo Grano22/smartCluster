@@ -1,5 +1,10 @@
 package org.sample;
 
+import org.sample.clustermanagement.NodeConfig;
+import org.sample.clustermanagement.NodeConfigLoader;
+import org.sample.clustermanagement.NodesMeshManager;
+import org.sample.remoteexecution.RemoteExecutionDelegator;
+import org.sample.remoteexecution.RemoteExecutionHandlerJob;
 import org.sample.runtime.CommandLineExecutionRuntime;
 import org.sample.runtime.ExecutionRuntime;
 import org.sample.runtime.LanguageExpressionExecutionRuntime;
@@ -35,7 +40,8 @@ public class App {
             )
         );
         JsonMapper jsonMapper = JsonMapper.shared();
-        NodesMeshManager nodesMeshManager = NodesMeshManager.initMeshFromConfig(config);
+        var nodesMeshManager = NodesMeshManager.initMeshFromConfig(config);
+        var remoteExecutionDelegator = new RemoteExecutionDelegator();
 
         var cliHandler = new CommandLineExecutionRuntime("Program", input -> {
             switch (input.command()) {
@@ -48,7 +54,7 @@ public class App {
             return new ExecutionRuntime.Result(0, "Invalid command");
         });
         var runtimeHandlers = Set.of(cliHandler, new LanguageExpressionExecutionRuntime());
-        var uiCommandHandler = new UICommandHandler(nodesMeshManager, runtimeHandlers);
+        var uiCommandHandler = new UICommandHandler(nodesMeshManager, runtimeHandlers, remoteExecutionDelegator);
 
         var uiJob = new Thread(new UIJob(config.webPort(), uiCommandHandler::handleMessage));
         uiJob.start();
@@ -63,6 +69,9 @@ public class App {
             nodesMeshManager
         );
         alivenessCollector.start();
+
+        var remoteExecutionHandlerJob = new Thread(new RemoteExecutionHandlerJob(config.communicationPort(), runtimeHandlers));
+        remoteExecutionHandlerJob.start();
 
         logger.info("Cluster started, ready to act");
 

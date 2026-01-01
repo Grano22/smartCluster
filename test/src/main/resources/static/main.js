@@ -125,6 +125,8 @@ class CommandExecutionDialogController {
 
             websocket.send(JSON.stringify({
                 type: "execute_command",
+                targetHostname: formData.get('targetHostname'),
+                targetPort: formData.get('targetPort'),
                 requestedAt: new Date().toISOString(),
                 runtimeName: formData.get('runtimeName'),
                 input: {
@@ -149,7 +151,8 @@ class CommandExecutionDialogController {
     }
 
     showFor(node) {
-        //this.#dialogForm.elements.namedItem('nodeAddress').value = node.address;
+        this.#dialogForm.elements.namedItem('targetHostname').value = node.hostname;
+        this.#dialogForm.elements.namedItem('targetPort').value = node.communicationPort;
 
         const runtimeSelect = this.#dialogForm.elements.namedItem('runtimeName');
         runtimeSelect.replaceChildren();

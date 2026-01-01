@@ -1,14 +1,14 @@
 package org.sample;
 
 import lombok.NonNull;
+import org.sample.clustermanagement.Cluster;
+import org.sample.clustermanagement.NodesMeshManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 import tools.jackson.databind.json.JsonMapper;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
@@ -50,7 +50,7 @@ public class AlivenessCollector implements Runnable {
                 socket.receive(packet);
                 String rawJson = new String(packet.getData(), StandardCharsets.UTF_8);
                 String cleanJson = rawJson.replace("\u0000", "");
-                logger.info("Received heartbeat from {}:{}, {}", packet.getAddress(), packet.getPort(), cleanJson);
+                logger.trace("Received heartbeat from {}:{}, {}", packet.getAddress(), packet.getPort(), cleanJson);
                 HeartbeatJob.Heartbeat heartbeat = mapper.readValue(cleanJson, HeartbeatJob.Heartbeat.class);
 
                 if (heartbeat.clusters() != null) {
@@ -59,8 +59,6 @@ public class AlivenessCollector implements Runnable {
 
 //                Set<Cluster> clustersMissing = new HashSet<>(heartbeat.clusters());
 //                clustersMissing.removeAll(commonClusters);
-
-                    System.out.println(mapper.writeValueAsString(meshManager.getClusters()));
 
                     for (var cluster : commonClusters) {
                         for (var node : cluster.nodes()) {
@@ -76,8 +74,6 @@ public class AlivenessCollector implements Runnable {
 
                     // TODO: Do we need to know about clusters that this server is not connected?
                     //meshManager.addClusters(clustersMissing);
-
-                    System.out.println(mapper.writeValueAsString(meshManager.getClusters()));
 
                     packet.setLength(buffer.length);
                 }

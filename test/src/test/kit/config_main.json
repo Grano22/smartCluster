@@ -1,6 +1,6 @@
 {
     "host": "localhost",
-    "tcpPort": 9001,
+    "communicationPort": 9001,
     "webPort": 9002,
     "heartbeatPort": 9003,
     "heartbeatProbingPeriod": 1000,
