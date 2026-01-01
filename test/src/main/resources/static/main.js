@@ -101,7 +101,7 @@ class CommandExecutionDialogController {
     #executionStatusCode;
     #executionResult;
 
-    constructor(websocket) {
+    constructor(webservice) {
         this.#dialog = document.getElementById('commandExecutionDialog');
         this.#dialogForm = this.#dialog.querySelector('form');
         this.#executionStatusCode = this.#dialog.querySelector('#execution__statusCode');
@@ -111,30 +111,16 @@ class CommandExecutionDialogController {
             evt.preventDefault();
             const formData = new FormData(evt.currentTarget);
 
-            console.log(Array.from(formData.entries()));
-            console.log({
-                type: "execute_command",
-                requestedAt: new Date().toISOString(),
-                runtimeName: formData.get('runtimeName'),
-                input: {
+            webservice.executeCommand(
+                formData.get('targetHostname'),
+                formData.get('targetPort'),
+                formData.get('runtimeName'),
+                {
                     command: formData.get('command'),
                     positionalArguments: [],
                     options: {}
                 }
-            });
-
-            websocket.send(JSON.stringify({
-                type: "execute_command",
-                targetHostname: formData.get('targetHostname'),
-                targetPort: formData.get('targetPort'),
-                requestedAt: new Date().toISOString(),
-                runtimeName: formData.get('runtimeName'),
-                input: {
-                    command: formData.get('command'),
-                    positionalArguments: [],
-                    options: {}
-                }
-            }))
+            );
         });
         this.#dialog.querySelector('.dialog__closeBtn')
             .addEventListener('click', () => this.close())
@@ -174,16 +160,123 @@ class CommandExecutionDialogController {
     }
 }
 
+const connectToTheWebSync = (messageHandler) => {
+    let websocketHandle
+
+    const connect = () => {
+        const websocket = new WebSocket(`ws://${location.host || '127.0.0.1:8080'}/view/updates`);
+
+        websocket.addEventListener("open", (socketEvent) => {
+            console.log("Synchronization is enabled", socketEvent);
+
+            websocket.send(JSON.stringify({
+                type: "query_cluster_details",
+                requestedAt: new Date().toISOString()
+            }));
+
+            scheduleNextUpdate();
+        });
+
+        websocket.addEventListener("message", (socketEvent) => messageHandler(socketEvent, websocket));
+
+        websocket.addEventListener("error", (socketEvent) => {
+            console.error(socketEvent);
+        });
+
+        websocket.addEventListener("close", (socketEvent) => {
+            websocketHandle = connect();
+        });
+
+        return websocket;
+    }
+
+    const scheduleNextUpdate = () => {
+        setTimeout(() => {
+            if (websocketHandle.readyState === WebSocket.OPEN) {
+                console.log("Sending request for cluster status...");
+                websocketHandle.send(JSON.stringify({
+                    type: "query_cluster_details",
+                    requestedAt: new Date().toISOString()
+                }));
+
+                scheduleNextUpdate();
+            }
+        }, 5000);
+    }
+
+    websocketHandle = connect();
+
+    const queryClusters = () => {
+        websocketHandle.send(JSON.stringify({
+            type: "query_cluster_details",
+            requestedAt: new Date().toISOString()
+        }));
+    }
+
+    const executeCommand = (targetHostname, targetPort, runtimeName, input) => {
+        websocketHandle.send(JSON.stringify({
+            type: "execute_command",
+            targetHostname,
+            targetPort,
+            requestedAt: new Date().toISOString(),
+            runtimeName,
+            input
+        }));
+    }
+
+    return {
+        get isConnected() {
+            return websocketHandle.readyState === WebSocket.OPEN;
+        },
+        queryClusters,
+        executeCommand
+    };
+}
+
 window.addEventListener("load", (wevt) => {
     /** @type {DataTable} dataTable **/
     const dataTable = document.getElementById('clustersNodes');
     const lastSyncNode = document.getElementById('lastClusterSyncDate');
     const resyncButton = document.getElementById('resyncButton');
-    const websocket = new WebSocket(`ws://${location.host || '127.0.0.1:8080'}/view/updates`);
-    const commandExecutionDialogController = new CommandExecutionDialogController(websocket);
+    const webService = connectToTheWebSync((socketEvent, websocket) => {
+        console.log("Received message", socketEvent);
+
+        const incomingEvent = JSON.parse(socketEvent.data);
+
+        switch (incomingEvent.type) {
+            case "cluster_details":
+                lastSyncNode.textContent = incomingEvent.processedAt;
+                clusterDetailsEntries.splice(0, clusterDetailsEntries.length);
+
+                const entries = [];
+                for (const cluster of incomingEvent.data.clusters) {
+                    for (const node of cluster.nodes) {
+                        entries.push({
+                            name: cluster.name,
+                            address: `${node.hostname}:${node.communicationPort}`,
+                            tasks: ``,
+                            last_heartbeat: node.lastHeartbeat,
+                            trip_time: node.lastTrip,
+                            supportedRuntimes: node.supportedRuntimes.join(', ')
+                        });
+
+                        clusterDetailsEntries.push({
+                            ...node,
+                            clusterName: cluster.name
+                        });
+                    }
+                }
+
+                dataTable.setEntries(entries);
+                break;
+            case "execution_result":
+                commandExecutionDialogController.updateOutput(incomingEvent.data.result.statusCode, incomingEvent.data.result.output);
+        }
+    });
+    const commandExecutionDialogController = new CommandExecutionDialogController(webService);
 
     eventBus.addEventListener('executeOnNode', (evt) => {
-        if (websocket.readyState !== WebSocket.OPEN) {
+        if (!webService.isConnected) {
             alert('Connection with server is not established. Try again later.');
 
             return;
@@ -197,66 +290,12 @@ window.addEventListener("load", (wevt) => {
     });
 
     resyncButton.addEventListener("click", (evt) => {
-        if (websocket.readyState !== WebSocket.OPEN) {
+        if (!webService.isConnected) {
             alert('Connection with server is not established. Try again later.');
 
             return;
         }
 
-        websocket.send(JSON.stringify({
-            type: "query_cluster_details",
-            requestedAt: new Date().toISOString()
-        }));
+        webService.queryClusters();
     });
-
-    websocket.addEventListener("open", (socketEvent) => {
-        console.log("Synchronization is enabled", socketEvent);
-
-        websocket.send(JSON.stringify({
-            type: "query_cluster_details",
-            requestedAt: new Date().toISOString()
-        }));
-    });
-
-    websocket.addEventListener("message", (socketEvent) => {
-    console.log("Received message", socketEvent);
-
-    const incomingEvent = JSON.parse(socketEvent.data);
-
-    switch (incomingEvent.type) {
-      case "cluster_details":
-          lastSyncNode.textContent = incomingEvent.processedAt;
-          clusterDetailsEntries.splice(0, clusterDetailsEntries.length);
-
-          const entries = [];
-          for (const cluster of incomingEvent.data.clusters) {
-                for (const node of cluster.nodes) {
-                     entries.push({
-                         name: cluster.name,
-                         address: `${node.hostname}:${node.communicationPort}`,
-                         tasks: ``,
-                         last_heartbeat: node.lastHeartbeat,
-                         trip_time: node.lastTrip,
-                         supportedRuntimes: node.supportedRuntimes.join(', ')
-                     });
-
-                    clusterDetailsEntries.push({
-                        ...node,
-                        clusterName: cluster.name
-                    });
-                }
-          }
-
-          dataTable.setEntries(entries);
-          break;
-        case "execution_result":
-            commandExecutionDialogController.updateOutput(incomingEvent.data.result.statusCode, incomingEvent.data.result.output);
-    }
-    });
-
-    websocket.addEventListener("error", (socketEvent) => {
-        console.error(socketEvent);
-    });
-
-    websocket.addEventListener("close", (socketEvent) => {});
 });
