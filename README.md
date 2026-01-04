@@ -70,13 +70,13 @@ mvn clean verify -DskipTests # or mvn clean verify -Dmaven.test.skip=true -Dmave
 In the development phase, you can run the project using the following command:
 
 ```shell
-CONFIG_FILE=src/test/kit/config_main.json  mvn -q exec:java -Dexec.mainClass=org.sample.App -e
+CONFIG_FILE=src/test/kit/config_main.json  mvn -q exec:java -Dexec.mainClass=io.grano22.cluster.App -e
 ```
 
 This will create one node, if you want to create another one, you can use:
 
 ````shell
-CONFIG_FILE=src/test/kit/config_secondary.json  mvn -q exec:java -Dexec.mainClass=org.sample.App -e
+CONFIG_FILE=src/test/kit/config_secondary.json  mvn -q exec:java -Dexec.mainClass=io.grano22.cluster.App -e
 ````
 
 To run one node after generating an uber JAR, please use the following command:
