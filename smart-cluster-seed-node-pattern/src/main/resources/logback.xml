@@ -1,0 +1,20 @@
+<configuration>
+    <appender name="DB_DRIVER" class="io.grano22.cluster.logging.ConcurrentDbLogCollector">
+        <connectionSource class="io.grano22.cluster.logging.ConnectionSource">
+            <driverClass>org.h2.Driver</driverClass>
+            <url>jdbc:h2:./logs;AUTO_SERVER=TRUE</url>
+            <user>sa</user>
+            <password></password>
+        </connectionSource>
+        <queueSize>10000</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <includeCallerData>true</includeCallerData>
+    </appender>
+    <appender name="MEMORY" class="io.grano22.cluster.logging.ConcurrentMemoryLogCollector" />
+
+    <root level="INFO">
+        <appender-ref ref="DB_DRIVER" />
+        <appender-ref ref="MEMORY" />
+    </root>
+
+</configuration>

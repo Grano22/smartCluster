@@ -49,7 +49,7 @@ Smart Cluster Project (With management interface)
 
 ## 🐾 How to run
 
-Beforehand, enter to the `test` directory and install all packages using the following command:
+Beforehand, enter to the `smart-cluster-seed-node-pattern` directory and install all packages using the following command:
 
 ```shell
 mvn clean install
