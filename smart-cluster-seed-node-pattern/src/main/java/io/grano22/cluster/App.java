@@ -8,27 +8,19 @@ import io.grano22.cluster.remoteexecution.RemoteExecutionHandlerJob;
 import io.grano22.cluster.runtime.CommandLineExecutionRuntime;
 import io.grano22.cluster.runtime.ExecutionRuntime;
 import io.grano22.cluster.runtime.LanguageExpressionExecutionRuntime;
+import org.apache.tools.ant.types.Commandline;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 //import org.slf4j.simple.SimpleLogger;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 public class App {
-//    static {
-//        Properties properties = new Properties();
-//        properties.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "warn");
-//        properties.setProperty("org.slf4j.simpleLogger.log.org.sample", "info");
-//        properties.setProperty(SimpleLogger.LOG_FILE_KEY, "System.out");
-//        properties.setProperty(SimpleLogger.SHOW_DATE_TIME_KEY, "true");
-//        properties.setProperty(SimpleLogger.SHOW_THREAD_NAME_KEY, "true");
-//        properties.setProperty(SimpleLogger.SHOW_LOG_NAME_KEY, "true");
-//        System.setProperties(properties);
-//    }
-
     private static final Logger logger = LoggerFactory.getLogger(App.class);
 
     public static void main(String[] args) throws Exception {
@@ -43,10 +35,23 @@ public class App {
         var nodesMeshManager = NodesMeshManager.initMeshFromConfig(config);
         var remoteExecutionDelegator = new RemoteExecutionDelegator();
 
+        var heartBeatJob = new HeartbeatJob(nodesMeshManager);
+        heartBeatJob.runForDiscoverableNodes();
+        heartBeatJob.run();
+
         var cliHandler = new CommandLineExecutionRuntime("Program", input -> {
+            System.out.println(jsonMapper.writeValueAsString(input));
+
             switch (input.command()) {
                 case "info" -> {
                     return new ExecutionRuntime.Result(0, jsonMapper.writeValueAsString(nodesMeshManager.getClusters()));
+                }
+                case "join" -> {
+                    var netAddr = input.positionalArguments()[0];
+                    var netPort = Integer.parseInt(input.positionalArguments()[1]);
+                    heartBeatJob.runOnce(Set.of(new InetSocketAddress(netAddr, netPort)), true);
+
+                    return new ExecutionRuntime.Result(0, "OK");
                 }
                 case "shutdown" -> System.exit(0);
             }
@@ -58,10 +63,6 @@ public class App {
 
         var uiJob = new Thread(new UIJob(config.webPort(), uiCommandHandler::handleMessage));
         uiJob.start();
-
-        var heartBeatJob = new HeartbeatJob(nodesMeshManager);
-        heartBeatJob.runForDiscoverableNodes();
-        heartBeatJob.run();
 
         var alivenessCollector = new AlivenessCollector(
             config.heartbeatPort(),
@@ -79,7 +80,23 @@ public class App {
         do {
             System.out.print("> ");
             String input = scanner.nextLine();
-            var result = cliHandler.execute(new ExecutionRuntime.Input(input));
+            var localArgs = Commandline.translateCommandline(input);
+            var commandName = localArgs[0];
+            var positionalArguments = Arrays.stream(localArgs, 1, localArgs.length)
+                .filter(arg -> !arg.startsWith("-"))
+                .toArray(String[]::new)
+            ;
+            var namedArguments = Arrays.stream(localArgs, 1, localArgs.length)
+                .filter(arg -> arg.startsWith("-"))
+                .map(arg -> arg.split("="))
+                 .collect(Collectors.toMap(
+                     parts -> parts[0],
+                     parts -> parts.length > 1 ? parts[1] : "true",
+                     (_, replacement) -> replacement
+                 ))
+            ;
+
+            var result = cliHandler.execute(new ExecutionRuntime.Input(commandName, positionalArguments, namedArguments));
 
             System.out.println("Status Code: " + result.statusCode());
             System.out.println("\nMessage: \n" + result.output());

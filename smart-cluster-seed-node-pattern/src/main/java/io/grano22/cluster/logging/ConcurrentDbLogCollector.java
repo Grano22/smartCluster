@@ -75,14 +75,11 @@ public class ConcurrentDbLogCollector extends AppenderBase<ILoggingEvent> {
             statement.setString(2, mapper.writeValueAsString(iLoggingEvent.getMDCPropertyMap()));
 
             statement.execute();
-
-            System.out.println("Log entry stored");
         } catch (SQLException exception) {
-            System.out.println(exception.getMessage());
             logger.atError()
-                    .setCause(exception)
-                    .addMarker(contextMarker)
-                    .log("Failed to execute database query")
+                .setCause(exception)
+                .addMarker(contextMarker)
+                .log("Failed to execute database query")
             ;
         }
     }
