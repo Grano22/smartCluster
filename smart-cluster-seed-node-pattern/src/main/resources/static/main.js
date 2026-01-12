@@ -1,3 +1,12 @@
+const applyGlobalStyles = (container) => {
+    const style = document.createElement('link');
+    style.rel = 'stylesheet';
+    style.type = 'text/css';
+    style.href = 'main.css';
+
+    container.appendChild(style);
+}
+
 class DataTable extends HTMLElement {
     #ROW_TEMPLATE;
     #tbody;
@@ -8,7 +17,6 @@ class DataTable extends HTMLElement {
         this.#ROW_TEMPLATE = this.shadowRoot.host.querySelector('template#row-template');
         this.removeChild(this.#ROW_TEMPLATE);
         this.#tbody = this.shadowRoot.querySelector('tbody');
-        console.log(this.#ROW_TEMPLATE, this.#tbody);
     }
 
     addEntry(item) {
@@ -53,6 +61,60 @@ class DataTable extends HTMLElement {
 }
 
 customElements.define('data-table', DataTable);
+
+class LogList extends HTMLElement {
+    #LOG_ITEM_TEMPLATE;
+    #listRef;
+    #entries = [];
+
+    constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+        applyGlobalStyles(this.shadowRoot);
+        this.#listRef = this.shadowRoot.ownerDocument.createElement('ul');
+        this.#listRef.classList.add('log-list__container');
+        this.shadowRoot.appendChild(this.#listRef);
+        this.#LOG_ITEM_TEMPLATE = this.shadowRoot.host.querySelector('template#log-template');
+        this.removeChild(this.#LOG_ITEM_TEMPLATE);
+    }
+
+    addEntry(logEntry) {
+        this.#entries.push(logEntry);
+        this.#renderAll();
+    }
+
+    #renderAll() {
+        //this.#listRef.replaceChildren();
+        this.#entries.forEach(entry => this.#renderLogEntry(entry));
+    }
+
+    #renderLogEntry(item) {
+        const clone = this.#LOG_ITEM_TEMPLATE.content.cloneNode(true);
+        const nodeWalker = document.createTreeWalker(clone, NodeFilter.SHOW_COMMENT, null);
+
+        let nextNode = nodeWalker.nextNode();
+        while (nextNode) {
+            const nextComment = nextNode;
+            const commentValue = nextComment.nodeValue;
+
+            if (!commentValue.startsWith('@') || !commentValue.endsWith('@')) {
+                continue;
+            }
+
+            const key = commentValue.slice(1, -1).trim();
+            const textNode = document.createTextNode(item[key] || "");
+
+            nextNode = nodeWalker.nextNode();
+
+            nextComment.parentNode.appendChild(textNode);
+            nextComment.parentNode.removeChild(nextComment);
+        }
+
+        this.#listRef.appendChild(clone);
+    }
+}
+
+customElements.define('log-list', LogList);
 
 class EmittedEvent extends CustomEvent {
     #originalEvent;
@@ -236,6 +298,7 @@ const connectToTheWebSync = (messageHandler) => {
 window.addEventListener("load", (wevt) => {
     /** @type {DataTable} dataTable **/
     const dataTable = document.getElementById('clustersNodes');
+    const currentLogList = document.getElementById('currentNodeLogs');
     const lastSyncNode = document.getElementById('lastClusterSyncDate');
     const resyncButton = document.getElementById('resyncButton');
     const webService = connectToTheWebSync((socketEvent, websocket) => {
@@ -244,6 +307,10 @@ window.addEventListener("load", (wevt) => {
         const incomingEvent = JSON.parse(socketEvent.data);
 
         switch (incomingEvent.type) {
+            case "log_message":
+                console.log('received log message', incomingEvent);
+                currentLogList.addEntry(incomingEvent);
+                break;
             case "cluster_details":
                 lastSyncNode.textContent = incomingEvent.processedAt;
                 clusterDetailsEntries.splice(0, clusterDetailsEntries.length);

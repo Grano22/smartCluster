@@ -14,7 +14,10 @@ import tools.jackson.databind.json.JsonMapper;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -70,9 +73,10 @@ public class ConcurrentDbLogCollector extends AppenderBase<ILoggingEvent> {
     }
 
     private void storeLog(@NonNull ILoggingEvent iLoggingEvent) {
-        try(var statement = connection.prepareStatement("INSERT INTO log_entries (message, mdc) VALUES (?, ?)")) {
+        try(var statement = connection.prepareStatement("INSERT INTO log_entries (message, markers, mdc) VALUES (?, ?, ?)")) {
             statement.setString(1, iLoggingEvent.getFormattedMessage());
-            statement.setString(2, mapper.writeValueAsString(iLoggingEvent.getMDCPropertyMap()));
+            statement.setString(2, mapper.writeValueAsString(Optional.ofNullable(iLoggingEvent.getMarkerList()).orElse(Collections.emptyList())));
+            statement.setString(3, mapper.writeValueAsString(iLoggingEvent.getMDCPropertyMap()));
 
             statement.execute();
         } catch (SQLException exception) {
@@ -92,6 +96,7 @@ public class ConcurrentDbLogCollector extends AppenderBase<ILoggingEvent> {
             CREATE TABLE IF NOT EXISTS log_entries (
                 id IDENTITY PRIMARY KEY,
                 message VARCHAR(255),
+                markers JSON,
                 mdc TEXT,
                 createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
             )

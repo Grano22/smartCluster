@@ -48,6 +48,23 @@
                 </template>
             </data-table>
 
+            <section class="section-centred">
+                <h3>Node logs</h3>
+
+                <div class="tab-bar" role="tablist">
+                    <div class="tab-bar__item">Current node</div>
+                </div>
+
+                <log-list id="currentNodeLogs">
+                    <template id="log-template">
+                        <li>
+                            <span><!--@ processedAt @--></span>
+                            <span><!--@ data @--></span>
+                        </li>
+                    </template>
+                </log-list>
+            </section>
+
             <dialog id="commandExecutionDialog">
                 <section class="left-container dialog-header">
                     <h3>Execute command on Cluster</h3>

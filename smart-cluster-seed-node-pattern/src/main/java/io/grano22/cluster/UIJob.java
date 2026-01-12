@@ -20,6 +20,9 @@ public final class UIJob implements Runnable {
     private final @NonNull Server server;
     private final @NonNull BiConsumer<String, Session> messageHandler;
 
+    // TODO: Refactor in future, best practise is to avoid exposing handler
+    private UISyncEndpoint uiSyncEndpoint;
+
     public UIJob(int webPort, @NonNull final BiConsumer<String, Session> messageHandler) {
         server = new Server(webPort);
         this.messageHandler = messageHandler;
@@ -37,18 +40,17 @@ public final class UIJob implements Runnable {
 
             handler.addServlet(UIServeEndpoint.class, "/*");
 
+            uiSyncEndpoint = new UISyncEndpoint(messageHandler);
             var websocketConfig = ServerEndpointConfig.Builder
                 .create(UISyncEndpoint.class, "/view/updates")
                 .configurator(new ServerEndpointConfig.Configurator() {
                     @Override
                     public <T> T getEndpointInstance(Class<T> endpointClass) throws InstantiationException {
-                        if (UISyncEndpoint.class.isAssignableFrom(endpointClass)) {
-                            var uiSyncEndpoint = new UISyncEndpoint(messageHandler);
+                    if (UISyncEndpoint.class.isAssignableFrom(endpointClass)) {
+                        return endpointClass.cast(uiSyncEndpoint);
+                    }
 
-                            return endpointClass.cast(uiSyncEndpoint);
-                        }
-
-                        return super.getEndpointInstance(endpointClass);
+                    return super.getEndpointInstance(endpointClass);
                     }
                 })
                  .build()
@@ -70,5 +72,9 @@ public final class UIJob implements Runnable {
                 .log("Failed on UI Job")
             ;
         }
+    }
+
+    public void emitLogMessage(@NonNull String message) {
+        uiSyncEndpoint.emitLogMessage(message);
     }
 }

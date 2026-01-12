@@ -3,6 +3,7 @@ package io.grano22.cluster;
 import io.grano22.cluster.clustermanagement.NodeConfig;
 import io.grano22.cluster.clustermanagement.NodeConfigLoader;
 import io.grano22.cluster.clustermanagement.NodesMeshManager;
+import io.grano22.cluster.logging.ConcurrentWebLogEmitter;
 import io.grano22.cluster.remoteexecution.RemoteExecutionDelegator;
 import io.grano22.cluster.remoteexecution.RemoteExecutionHandlerJob;
 import io.grano22.cluster.runtime.CommandLineExecutionRuntime;
@@ -61,8 +62,11 @@ public class App {
         var runtimeHandlers = Set.of(cliHandler, new LanguageExpressionExecutionRuntime());
         var uiCommandHandler = new UICommandHandler(nodesMeshManager, runtimeHandlers, remoteExecutionDelegator);
 
-        var uiJob = new Thread(new UIJob(config.webPort(), uiCommandHandler::handleMessage));
-        uiJob.start();
+        var uiJob = new UIJob(config.webPort(), uiCommandHandler::handleMessage);
+        var uiJobThread = new Thread(uiJob);
+        uiJobThread.start();
+
+        ConcurrentWebLogEmitter.setUiJob(uiJob);
 
         var alivenessCollector = new AlivenessCollector(
             config.heartbeatPort(),
