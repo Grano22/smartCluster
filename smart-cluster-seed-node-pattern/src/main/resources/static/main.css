@@ -333,4 +333,9 @@ ul.log-list__container {
     background: none;
     flex: 1;
     text-align: center;
+
+    &.selected {
+        font-weight: bolder;
+        background: #7e81df;
+    }
 }

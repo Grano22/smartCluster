@@ -83,6 +83,11 @@ class LogList extends HTMLElement {
         this.#renderAll();
     }
 
+    setEntries(items) {
+        this.#entries = [ ...items ];
+        this.#renderAll();
+    }
+
     #renderAll() {
         //this.#listRef.replaceChildren();
         this.#entries.forEach(entry => this.#renderLogEntry(entry));
@@ -222,11 +227,12 @@ class CommandExecutionDialogController {
     }
 }
 
-const connectToTheWebSync = (messageHandler) => {
+const connectToTheWebSync = (messageHandler, address) => {
     let websocketHandle
 
     const connect = () => {
-        const websocket = new WebSocket(`ws://${location.host || '127.0.0.1:8080'}/view/updates`);
+        address = address || location.host || '127.0.0.1:8080';
+        const websocket = new WebSocket(`ws://${address}/view/updates`);
 
         websocket.addEventListener("open", (socketEvent) => {
             console.log("Synchronization is enabled", socketEvent);
@@ -239,7 +245,7 @@ const connectToTheWebSync = (messageHandler) => {
             scheduleNextUpdate();
         });
 
-        websocket.addEventListener("message", (socketEvent) => messageHandler(socketEvent, websocket));
+        websocket.addEventListener("message", (socketEvent) => messageHandler(socketEvent, websocket, address));
 
         websocket.addEventListener("error", (socketEvent) => {
             console.error(socketEvent);
@@ -296,19 +302,57 @@ const connectToTheWebSync = (messageHandler) => {
 }
 
 window.addEventListener("load", (wevt) => {
+    const currentBaseUrl = location.host;
+    const logsPerNode = new Map();
+    let connectionPool = new Map;
+    let filteredLogs = [];
+    let selectedNode = currentBaseUrl;
     /** @type {DataTable} dataTable **/
     const dataTable = document.getElementById('clustersNodes');
+    /** @type {LogList} currentLogList */
     const currentLogList = document.getElementById('currentNodeLogs');
     const lastSyncNode = document.getElementById('lastClusterSyncDate');
     const resyncButton = document.getElementById('resyncButton');
-    const webService = connectToTheWebSync((socketEvent, websocket) => {
+    const nodesLogsSwitchTab = document.getElementById('detectedNodes');
+    nodesLogsSwitchTab.addEventListener('click', e => {
+        /** @var {HTMLElement} targetNode **/
+        const targetNode = e.target;
+        const targetAddress = targetNode.getAttribute('data-address');
+        selectedNode = targetAddress;
+
+        for (const childNode of nodesLogsSwitchTab.childNodes) {
+            if (childNode instanceof HTMLElement && childNode.classList.contains('selected')) {
+                childNode.classList.remove('selected');
+                break;
+            }
+        }
+
+        targetNode.classList.add('selected');
+
+        filteredLogs = [...(logsPerNode.get(targetAddress) || [])];
+        currentLogList.setEntries(filteredLogs);
+        console.log(Array.from(connectionPool.entries()));
+    });
+
+    const standardHandler = (socketEvent, websocket, sourceAddress) => {
         console.log("Received message", socketEvent);
 
         const incomingEvent = JSON.parse(socketEvent.data);
 
         switch (incomingEvent.type) {
             case "log_message":
+                if (!logsPerNode.has(sourceAddress)) {
+                    logsPerNode.set(sourceAddress, []);
+                }
+
+                const nodeLogs = logsPerNode.get(sourceAddress);
+                nodeLogs.push(incomingEvent);
+
+                if (sourceAddress !== selectedNode) {
+                    break;
+                }
                 console.log('received log message', incomingEvent);
+                filteredLogs = [...nodeLogs];
                 currentLogList.addEntry(incomingEvent);
                 break;
             case "cluster_details":
@@ -318,9 +362,11 @@ window.addEventListener("load", (wevt) => {
                 const entries = [];
                 for (const cluster of incomingEvent.data.clusters) {
                     for (const node of cluster.nodes) {
+                        const nodeAddress = `${node.hostname}:${node.communicationPort}`;
+
                         entries.push({
                             name: cluster.name,
-                            address: `${node.hostname}:${node.communicationPort}`,
+                            address: nodeAddress,
                             tasks: ``,
                             last_heartbeat: node.lastHeartbeat,
                             trip_time: node.lastTrip,
@@ -331,6 +377,20 @@ window.addEventListener("load", (wevt) => {
                             ...node,
                             clusterName: cluster.name
                         });
+
+                        if (!connectionPool.has(nodeAddress)) {
+                            logsPerNode.set(nodeAddress, []);
+                            connectionPool.set(nodeAddress, connectToTheWebSync(standardHandler, nodeAddress));
+                            const nodeLogsTab = document.createElement('div');
+                            nodeLogsTab.setAttribute('data-address', nodeAddress);
+                            nodeLogsTab.classList.add('tab-bar__item');
+                            nodeLogsTab.appendChild(document.createTextNode(`Node ${nodeAddress}`));
+
+                            if (nodesLogsSwitchTab.children.length === 0) {
+                                nodeLogsTab.classList.add('selected');
+                            }
+                            nodesLogsSwitchTab.appendChild(nodeLogsTab);
+                        }
                     }
                 }
 
@@ -339,7 +399,9 @@ window.addEventListener("load", (wevt) => {
             case "execution_result":
                 commandExecutionDialogController.updateOutput(incomingEvent.data.result.statusCode, incomingEvent.data.result.output);
         }
-    });
+    };
+    const webService = connectToTheWebSync(standardHandler);
+    connectionPool.set(currentBaseUrl, webService);
     const commandExecutionDialogController = new CommandExecutionDialogController(webService);
 
     eventBus.addEventListener('executeOnNode', (evt) => {

@@ -51,9 +51,16 @@
             <section class="section-centred">
                 <h3>Node logs</h3>
 
-                <div class="tab-bar" role="tablist">
-                    <div class="tab-bar__item">Current node</div>
+                <div id="detectedNodes" class="tab-bar" role="tablist">
+<!--                    <div class="tab-bar__item">Current node</div>-->
                 </div>
+
+                <form>
+                    <label>
+                        Search logs:
+                        <input id="searchLogsField" type="search" placeholder="Search logs" />
+                    </label>
+                </form>
 
                 <log-list id="currentNodeLogs">
                     <template id="log-template">

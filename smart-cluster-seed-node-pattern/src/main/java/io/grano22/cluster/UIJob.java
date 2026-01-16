@@ -39,6 +39,7 @@ public final class UIJob implements Runnable {
             server.setHandler(handler);
 
             handler.addServlet(UIServeEndpoint.class, "/*");
+            handler.addServlet(ClusterInfoEndpoint.class, "/api/v1/cluster");
 
             uiSyncEndpoint = new UISyncEndpoint(messageHandler);
             var websocketConfig = ServerEndpointConfig.Builder
