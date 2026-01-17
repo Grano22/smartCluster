@@ -16,6 +16,11 @@
                 <time id="lastClusterSyncDate">(not synced)</time>
             </section>
 
+            <section class="right-container">
+                <button id="executeCommandOnTheLowestUtilizedNode">Execute command on the lower utilization</button>
+                <button id="joinCluster" command="show-modal" commandfor="nodeJoinDialog">Join node to the cluster</button>
+            </section>
+
             <data-table id="clustersNodes">
                 <template shadowrootmode="open">
                     <link rel="stylesheet" type="text/css" href="main.css" />
@@ -72,6 +77,30 @@
                 </log-list>
             </section>
 
+            <dialog id="nodeJoinDialog">
+                <section class="left-container dialog-header">
+                    <h3>Join node to the cluster</h3>
+                </section>
+
+                <section class="right-container">
+                    <button class="dialog__closeBtn" command="close" commandfor="nodeJoinDialog">&times;</button>
+                </section>
+
+                <section class="section-centred dialog-content">
+                    <form>
+                        <div>
+                            <label>Node hostname:
+                                <input type="text" name="targetHostname"/>
+                            </label>
+
+                            <label>Node target port:
+                                <input type="text" name="targetPort"/>
+                            </label>
+                        </div>
+                    </form>
+                </section>
+            </dialog>
+
             <dialog id="commandExecutionDialog">
                 <section class="left-container dialog-header">
                     <h3>Execute command on Cluster</h3>
@@ -93,7 +122,7 @@
                             </label>
 
                             <label>How many times to repeat:
-                                <input type="number" min="0" max="1000" step="1" name="howManyTimesToRepeat" required/>
+                                <input type="number" min="0" max="999999999999999999999999999999999" step="1" name="howManyTimesToRepeat" required/>
                             </label>
 
                             <label>Command:

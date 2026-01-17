@@ -424,6 +424,18 @@ window.addEventListener("load", (wevt) => {
     nodesLogsSwitchTab.appendChild(nodeLogsTab);
     const commandExecutionDialogController = new CommandExecutionDialogController(webService);
 
+    const openSendToTheLowestUtilizedClusterBtn = document.getElementById('executeCommandOnTheLowestUtilizedNode');
+    openSendToTheLowestUtilizedClusterBtn.addEventListener('click', () => {
+        //let minJobs = 0;
+        //const bestNode = clusterDetailsEntries.find(node => node.utilization.);
+
+        commandExecutionDialogController.showFor({
+            hostname: 'To be determined',
+            communicationPort: 'To be determined',
+            supportedRuntimes: ['CLI[Program]', 'LanguageExpression']
+        });
+    });
+
     eventBus.addEventListener('executeOnNode', (evt) => {
         if (!webService.isConnected) {
             alert('Connection with server is not established. Try again later.');

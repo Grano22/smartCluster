@@ -13,10 +13,12 @@ public record ClusterNode(
     int heartbeatPort,
     @NonNull ZonedDateTime lastHeartbeat,
     int lastTrip,
-    @NonNull Set<String> supportedRuntimes
+    @NonNull Set<String> supportedRuntimes,
+    @NonNull ClusterNodeUtilization utilization
 ) {
     public ClusterNode {
         supportedRuntimes = Set.copyOf(supportedRuntimes);
+        utilization = new ClusterNodeUtilization(0, 4);
     }
 
     @Override

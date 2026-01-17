@@ -31,7 +31,8 @@ public final class NodesMeshManager {
             nodeSettings.heartbeatPort(),
             ZonedDateTime.now(),
             -1,
-            Set.of("CLI[Program]", LanguageExpressionExecutionRuntime.NAME)
+            Set.of("CLI[Program]", LanguageExpressionExecutionRuntime.NAME),
+            new ClusterNodeUtilization(0, 4)
         );
 
         return new NodesMeshManager(
@@ -114,6 +115,23 @@ public final class NodesMeshManager {
 
     public void setNodeAsNotHealthy(String host) {
         discoverableNodesStatus.update(host, "DOWN");
+    }
+
+    public void updateUtilizationFor(ClusterNodeMatcher matcher, int jobsInProgress) {
+        var nodesToUpdate = clusters
+           .parallelStream()
+           .flatMap(n -> n.nodes().stream())
+           .filter(matcher::matchAgainst)
+           .collect(Collectors.toSet())
+        ;
+
+        for (var node: nodesToUpdate) {
+            node.utilization().setJobsInProgress(jobsInProgress);
+        }
+    }
+
+    public void updateUtilization(int jobsInProgress) {
+        self.utilization().setJobsInProgress(jobsInProgress);
     }
 
     public boolean isNodeHealthy(String host) {

@@ -1,5 +1,7 @@
 package io.grano22.cluster.remoteexecution;
 
+import io.grano22.cluster.clustermanagement.ClusterNodeMatcher;
+import io.grano22.cluster.clustermanagement.NodesMeshManager;
 import io.grano22.cluster.logging.GlobalLoggerContextHolder;
 import lombok.NonNull;
 import io.grano22.cluster.runtime.ExecutionRuntime;
@@ -27,13 +29,21 @@ public final class RemoteExecutionHandlerJob implements Runnable {
     private final BlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
     private volatile boolean running = true;
 
-    public RemoteExecutionHandlerJob(int communicationPort, final @NonNull Set<ExecutionRuntime> runtimes) throws IOException {
+    private final NodesMeshManager meshManager;
+
+    public RemoteExecutionHandlerJob(
+        int communicationPort,
+        final @NonNull Set<ExecutionRuntime> runtimes,
+        final @NonNull NodesMeshManager meshManager
+    ) throws IOException {
         this.serverSocket = new ServerSocket(communicationPort);
         this.runtimes = runtimes;
         var threadFactory = new ConfigurableThreadFactory("delegated_job_", false);
+        this.meshManager = meshManager;
+
         this.executor = new ThreadPoolExecutor(
-            1,
-            1,
+            3,
+            4,
             3,
             TimeUnit.SECONDS,
             queue,
@@ -74,11 +84,8 @@ public final class RemoteExecutionHandlerJob implements Runnable {
                                 .result(result)
                                 .build()
                             ;
-                            System.out.println("Reach point");
                             writer.println(mapper.writeValueAsString(summary));
-                            System.out.println("Reach point #1");
                             writer.flush();
-                            System.out.println("Reach point #2");
 
                             GlobalLoggerContextHolder.propagateTo(logger.atInfo())
                                 .addMarker(contextMarker)
@@ -104,6 +111,7 @@ public final class RemoteExecutionHandlerJob implements Runnable {
                         ;
                     }
                 });
+                meshManager.updateUtilization(executor.getActiveCount());
             } catch (IOException e) {
                 logger.atError()
                     .addMarker(contextMarker)
@@ -129,7 +137,7 @@ public final class RemoteExecutionHandlerJob implements Runnable {
         }
 
         @Override
-        public Thread newThread(Runnable job) {
+        public Thread newThread(@NonNull Runnable job) {
             Thread t = new Thread(job, prefix + "-" + counter.getAndIncrement());
             t.setDaemon(daemon);
             t.setPriority(Thread.NORM_PRIORITY);

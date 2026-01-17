@@ -81,7 +81,13 @@ public class App {
         );
         alivenessCollector.start();
 
-        var remoteExecutionHandlerJob = new Thread(new RemoteExecutionHandlerJob(config.communicationPort(), runtimeHandlers));
+        var remoteExecutionHandlerJob = new Thread(
+              new RemoteExecutionHandlerJob(
+                  config.communicationPort(),
+                  runtimeHandlers,
+                  nodesMeshManager
+              )
+        );
         remoteExecutionHandlerJob.start();
 
         logger.info("Cluster started, ready to act");

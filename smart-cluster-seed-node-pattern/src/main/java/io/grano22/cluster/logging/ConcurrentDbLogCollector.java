@@ -1,6 +1,7 @@
 package io.grano22.cluster.logging;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.classic.spi.ThrowableProxy;
 import ch.qos.logback.core.AppenderBase;
 import lombok.NonNull;
 import lombok.Setter;
@@ -21,7 +22,7 @@ import java.util.Set;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-public class ConcurrentDbLogCollector extends AppenderBase<ILoggingEvent> {
+public final class ConcurrentDbLogCollector extends AppenderBase<ILoggingEvent> {
     private static final Marker contextMarker = MarkerFactory.getMarker("ConcurrentDbLogCollector");
     private static final Logger logger = LoggerFactory.getLogger(ConcurrentDbLogCollector.class);
     private static final BlockingArrayQueue<ILoggingEvent> toBeStored = new BlockingArrayQueue<>(1000);
@@ -74,11 +75,14 @@ public class ConcurrentDbLogCollector extends AppenderBase<ILoggingEvent> {
     }
 
     private void storeLog(@NonNull ILoggingEvent iLoggingEvent) {
-        try(var statement = connection.prepareStatement("INSERT INTO log_entries (message, markers, mdc, severity) VALUES (?, ?, ?, ?)")) {
+        try(var statement = connection.prepareStatement("INSERT INTO log_entries (message, markers, mdc, severity, threadName, errorMessage) VALUES (?, ?, ?, ?, ?, ?)")) {
+            var baseException = Optional.ofNullable(iLoggingEvent.getThrowableProxy()).orElse(new ThrowableProxy(new Exception("")));
             statement.setString(1, iLoggingEvent.getFormattedMessage());
             statement.setString(2, mapper.writeValueAsString(Optional.ofNullable(iLoggingEvent.getMarkerList()).orElse(Collections.emptyList())));
             statement.setString(3, mapper.writeValueAsString(iLoggingEvent.getMDCPropertyMap()));
             statement.setString(4, String.valueOf(iLoggingEvent.getLevel().toInt()));
+            statement.setString(5, Optional.ofNullable(iLoggingEvent.getThreadName()).orElse("Unknown"));
+            statement.setString(6, baseException.getMessage());
 
             statement.execute();
         } catch (SQLException exception) {
@@ -93,27 +97,18 @@ public class ConcurrentDbLogCollector extends AppenderBase<ILoggingEvent> {
 
     private void createDatabase() {
         try(var statement = connection.createStatement()) {
-            //DROP TABLE IF EXISTS log_entries;
-            // createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-            var result = statement.execute("""
+            statement.execute("""
             CREATE TABLE IF NOT EXISTS log_entries (
                 id IDENTITY PRIMARY KEY,
                 message TEXT,
                 markers JSON,
                 mdc JSON,
                 severity BIGINT,
+                threadName TEXT,
+                errorMessage TEXT,
                 createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
             )
             """);
-
-            if (!result) {
-                logger.atError()
-                    .addMarker(contextMarker)
-                    .log("Failed to create database table")
-                ;
-
-                return;
-            }
 
             logger.atInfo().addMarker(contextMarker).log("Database table created");
         } catch (SQLException exception) {
