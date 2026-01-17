@@ -7,6 +7,8 @@ Smart Cluster Project (With management interface)
 
 [![license](https://img.shields.io/github/license/nhn/tui.editor.svg)](https://github.com/nhn/tui.editor/blob/master/LICENSE)
 
+<img src="./documentation/app_preview_alpha_2.jpg" />
+
 <img src="./documentation/app_preview_alpha_1.jpg" />
 
 ## 🚩 Table of Contents
@@ -28,6 +30,7 @@ Smart Cluster Project (With management interface)
 * CLI and LanguageExpression runtimes are supported for both local and remote execution.
 * Heartbeats and self-connection detection.
 * WebSocket Long Pooling for UI Synchronization.
+* Real time logs collected from multiple nodes
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -37,6 +40,7 @@ Smart Cluster Project (With management interface)
 * Task splitter—split one heavy task into multiple smaller and delegate.
 * Pocket fragmentation—send support bigger data chunks for larger clusters.
 * Possibility to create and shutdown nodes on demand.
+* Optimize the cluster
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
