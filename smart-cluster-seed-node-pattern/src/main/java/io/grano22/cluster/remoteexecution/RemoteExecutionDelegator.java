@@ -35,7 +35,13 @@ public final class RemoteExecutionDelegator {
                 String rawRequest = mapper.writeValueAsString(delegation);
                 writer.println(rawRequest);
 
-                return mapper.readValue(reader, RemoteExecutionSummary.class);
+                var summary = mapper.readValue(reader, RemoteExecutionSummary.class);
+
+                logger.atInfo()
+                    .log("Result is summarized")
+                ;
+
+                return summary;
             } catch (Exception e) {
                 logger.atError()
                     .addMarker(contextMarker)
@@ -45,6 +51,6 @@ public final class RemoteExecutionDelegator {
 
                 throw new RuntimeException(e);
             }
-        }).orTimeout(40, TimeUnit.SECONDS);
+        }).orTimeout(2, TimeUnit.MINUTES);
     }
 }

@@ -68,22 +68,25 @@ public class ConcurrentDbLogCollector extends AppenderBase<ILoggingEvent> {
     }
 
     @Override
-    protected void append(ILoggingEvent iLoggingEvent) {
-        toBeStored.add(iLoggingEvent);
+    protected void append(@NonNull ILoggingEvent iLoggingEvent) {
+        iLoggingEvent.prepareForDeferredProcessing();
+        toBeStored.offer(iLoggingEvent);
     }
 
     private void storeLog(@NonNull ILoggingEvent iLoggingEvent) {
-        try(var statement = connection.prepareStatement("INSERT INTO log_entries (message, markers, mdc) VALUES (?, ?, ?)")) {
+        try(var statement = connection.prepareStatement("INSERT INTO log_entries (message, markers, mdc, severity) VALUES (?, ?, ?, ?)")) {
             statement.setString(1, iLoggingEvent.getFormattedMessage());
             statement.setString(2, mapper.writeValueAsString(Optional.ofNullable(iLoggingEvent.getMarkerList()).orElse(Collections.emptyList())));
             statement.setString(3, mapper.writeValueAsString(iLoggingEvent.getMDCPropertyMap()));
+            statement.setString(4, String.valueOf(iLoggingEvent.getLevel().toInt()));
 
             statement.execute();
         } catch (SQLException exception) {
             logger.atError()
                 .setCause(exception)
                 .addMarker(contextMarker)
-                .log("Failed to execute database query")
+                .addKeyValue("sqlState", exception.getSQLState())
+                .log("Failed to execute database query due to " + exception.getMessage())
             ;
         }
     }
@@ -95,9 +98,10 @@ public class ConcurrentDbLogCollector extends AppenderBase<ILoggingEvent> {
             var result = statement.execute("""
             CREATE TABLE IF NOT EXISTS log_entries (
                 id IDENTITY PRIMARY KEY,
-                message VARCHAR(255),
+                message TEXT,
                 markers JSON,
-                mdc TEXT,
+                mdc JSON,
+                severity BIGINT,
                 createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
             )
             """);

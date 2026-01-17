@@ -1,5 +1,6 @@
 package io.grano22.cluster.remoteexecution;
 
+import io.grano22.cluster.logging.GlobalLoggerContextHolder;
 import lombok.NonNull;
 import io.grano22.cluster.runtime.ExecutionRuntime;
 import org.slf4j.Logger;
@@ -52,6 +53,7 @@ public final class RemoteExecutionHandlerJob implements Runnable {
                         PrintWriter writer = new PrintWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
 
                         String line;
+                        long startTime = System.nanoTime();
                         while ((line = reader.readLine()) != null) {
                             if (line.trim().isEmpty()) continue;
 
@@ -70,8 +72,16 @@ public final class RemoteExecutionHandlerJob implements Runnable {
                             writer.println(mapper.writeValueAsString(summary));
                             writer.flush();
 
+                            GlobalLoggerContextHolder.propagateTo(logger.atInfo())
+                                .addMarker(contextMarker)
+                                .addKeyValue("timeTook", System.nanoTime() - startTime)
+                                .log("Requested execution finished")
+                            ;
+
                             break;
                         }
+
+                        clientSocket.close();
                     } catch (IOException exception) {
                         logger.atError()
                             .addMarker(contextMarker)

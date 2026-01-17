@@ -4,6 +4,7 @@ import io.grano22.cluster.clustermanagement.NodeConfig;
 import io.grano22.cluster.clustermanagement.NodeConfigLoader;
 import io.grano22.cluster.clustermanagement.NodesMeshManager;
 import io.grano22.cluster.logging.ConcurrentWebLogEmitter;
+import io.grano22.cluster.logging.GlobalLoggerContextHolder;
 import io.grano22.cluster.remoteexecution.RemoteExecutionDelegator;
 import io.grano22.cluster.remoteexecution.RemoteExecutionHandlerJob;
 import io.grano22.cluster.runtime.CommandLineExecutionRuntime;
@@ -32,6 +33,11 @@ public class App {
                     .orElse("config.json")
             )
         );
+        GlobalLoggerContextHolder.updateAtomically(context ->
+            context
+               .withWebHost(config.hostname() + ":" + config.webPort())
+        );
+
         JsonMapper jsonMapper = JsonMapper.shared();
         var nodesMeshManager = NodesMeshManager.initMeshFromConfig(config);
         var remoteExecutionDelegator = new RemoteExecutionDelegator();
