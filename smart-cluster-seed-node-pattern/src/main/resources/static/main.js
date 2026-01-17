@@ -186,6 +186,9 @@ class CommandExecutionDialogController {
                     command: formData.get('command'),
                     positionalArguments: [],
                     options: {}
+                },
+                {
+                    repeatTimes: formData.get('howManyTimesToRepeat')
                 }
             );
         });
@@ -281,11 +284,12 @@ const connectToTheWebSync = (messageHandler, address) => {
         }));
     }
 
-    const executeCommand = (targetHostname, targetPort, runtimeName, input) => {
+    const executeCommand = (targetHostname, targetPort, runtimeName, input, additionalOptions) => {
         websocketHandle.send(JSON.stringify({
             type: "execute_command",
             targetHostname,
             targetPort,
+            repeatTimes: additionalOptions.repeatTimes || 0,
             requestedAt: new Date().toISOString(),
             runtimeName,
             input

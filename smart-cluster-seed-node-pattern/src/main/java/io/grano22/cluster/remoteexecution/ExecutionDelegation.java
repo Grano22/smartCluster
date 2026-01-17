@@ -5,6 +5,7 @@ import io.grano22.cluster.runtime.ExecutionRuntime;
 
 public record ExecutionDelegation(
      @NonNull String runtimeName,
-     @NonNull ExecutionRuntime.Input input
+     @NonNull ExecutionRuntime.Input input,
+     int repeatTimes
 ) {
 }

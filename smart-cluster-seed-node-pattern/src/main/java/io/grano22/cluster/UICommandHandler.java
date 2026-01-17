@@ -39,7 +39,8 @@ public class UICommandHandler {
             int targetPort,
             @NonNull String runtimeName,
             @NonNull ExecutionRuntime.Input input,
-            ZonedDateTime requestedAt
+            ZonedDateTime requestedAt,
+            int repeatTimes
         ) implements UISyncCommand {}
 
         ZonedDateTime requestedAt();
@@ -47,7 +48,7 @@ public class UICommandHandler {
 
     private sealed interface UISyncResponseData {
         record ClustersInfo(Set<Cluster> clusters) implements UISyncResponseData {}
-        record ExecutionResultDetails(ExecutionRuntime.Result result) implements UISyncResponseData {}
+        record ExecutionResultDetails(ExecutionRuntime.ExecutionResult result) implements UISyncResponseData {}
     }
 
     @Builder
@@ -86,7 +87,7 @@ public class UICommandHandler {
 
         switch (command) {
             case UISyncCommand.ExecuteCommand executeCommandUISyncCommand -> {
-                ExecutionRuntime.Result result = handleExecution(executeCommandUISyncCommand);
+                ExecutionRuntime.ExecutionResult result = handleExecution(executeCommandUISyncCommand);
                 logger.atInfo().log("Execution result: {}", mapper.writeValueAsString(result));
 
                 var response = UISyncResponse.builder()
@@ -118,7 +119,7 @@ public class UICommandHandler {
         }
     }
 
-    private @NonNull ExecutionRuntime.Result handleExecution(@NonNull UISyncCommand.ExecuteCommand executeCommandUISyncCommand) {
+    private @NonNull ExecutionRuntime.ExecutionResult handleExecution(@NonNull UISyncCommand.ExecuteCommand executeCommandUISyncCommand) {
         if (
             executeCommandUISyncCommand.targetHostname().equals(meshManager.getSelf().hostname()) &&
             executeCommandUISyncCommand.targetPort() == meshManager.getSelf().communicationPort()
@@ -129,10 +130,14 @@ public class UICommandHandler {
         var summary = delegator.delegate(
             executeCommandUISyncCommand.targetHostname,
             executeCommandUISyncCommand.targetPort,
-            new ExecutionDelegation(executeCommandUISyncCommand.runtimeName, executeCommandUISyncCommand.input)
+            new ExecutionDelegation(
+                executeCommandUISyncCommand.runtimeName,
+                executeCommandUISyncCommand.input,
+                executeCommandUISyncCommand.repeatTimes
+            )
         )
             .exceptionally(e -> {
-                String reasonMessage = "Failed to delegate execution, unknown reason";
+                String reasonMessage = "Failed to delegate execution, unknown reason: " + e.getMessage();
 
                 if (e instanceof TimeoutException) {
                     reasonMessage = "Failed to delegate execution, timeout";

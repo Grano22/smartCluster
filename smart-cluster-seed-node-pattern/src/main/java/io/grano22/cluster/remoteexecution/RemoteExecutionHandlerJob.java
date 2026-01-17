@@ -64,13 +64,21 @@ public final class RemoteExecutionHandlerJob implements Runnable {
                                 .orElseThrow(() -> new IllegalArgumentException("Unknown runtime: " + delegatedTask.runtimeName()))
                             ;
 
-                            var result = runtime.execute(delegatedTask.input());
+                            ExecutionRuntime.ExecutionResult result = runtime.execute(delegatedTask.input());
+                            for (var i = 0; i < Math.max(0, delegatedTask.repeatTimes()); i++) {
+                                var localResult = runtime.execute(delegatedTask.input());
+                                result = result.withNextResult(localResult);
+                            }
+
                             var summary = RemoteExecutionSummary.builder()
                                 .result(result)
                                 .build()
                             ;
+                            System.out.println("Reach point");
                             writer.println(mapper.writeValueAsString(summary));
+                            System.out.println("Reach point #1");
                             writer.flush();
+                            System.out.println("Reach point #2");
 
                             GlobalLoggerContextHolder.propagateTo(logger.atInfo())
                                 .addMarker(contextMarker)
@@ -87,6 +95,12 @@ public final class RemoteExecutionHandlerJob implements Runnable {
                             .addMarker(contextMarker)
                             .setCause(exception)
                             .log("Failed to read client request")
+                        ;
+                    } catch (Exception exception) {
+                        logger.atError()
+                            .addMarker(contextMarker)
+                            .setCause(exception)
+                            .log("Failed to handle job: " + exception.getMessage())
                         ;
                     }
                 });

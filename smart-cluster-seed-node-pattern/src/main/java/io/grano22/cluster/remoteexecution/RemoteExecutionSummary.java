@@ -6,6 +6,6 @@ import io.grano22.cluster.runtime.ExecutionRuntime;
 
 @Builder
 public record RemoteExecutionSummary(
-     @NonNull ExecutionRuntime.Result result
+     @NonNull ExecutionRuntime.ExecutionResult result
 ) {
 }
