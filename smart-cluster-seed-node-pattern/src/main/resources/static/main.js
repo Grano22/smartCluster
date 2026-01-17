@@ -89,7 +89,7 @@ class LogList extends HTMLElement {
     }
 
     #renderAll() {
-        //this.#listRef.replaceChildren();
+        this.#listRef.replaceChildren();
         this.#entries.forEach(entry => this.#renderLogEntry(entry));
     }
 
@@ -301,6 +301,15 @@ const connectToTheWebSync = (messageHandler, address) => {
     };
 }
 
+const createNodeLogTab = (webTargetAddress) => {
+    const nodeLogsTab = document.createElement('div');
+    nodeLogsTab.setAttribute('data-address', webTargetAddress);
+    nodeLogsTab.classList.add('tab-bar__item');
+    nodeLogsTab.appendChild(document.createTextNode(`Node ${webTargetAddress}`));
+
+    return nodeLogsTab;
+}
+
 window.addEventListener("load", (wevt) => {
     const currentBaseUrl = location.host;
     const logsPerNode = new Map();
@@ -331,7 +340,12 @@ window.addEventListener("load", (wevt) => {
 
         filteredLogs = [...(logsPerNode.get(targetAddress) || [])];
         currentLogList.setEntries(filteredLogs);
-        console.log(Array.from(connectionPool.entries()));
+        console.log(Array.from(connectionPool.entries()), logsPerNode.get(targetAddress));
+    });
+    const logsSearchBar = document.getElementById('searchLogsField');
+    logsSearchBar.addEventListener('input', (ev) => {
+        filteredLogs =  [...(logsPerNode.get(selectedNode) || [])].filter(it => it.data.includes(ev.currentTarget.value));
+        currentLogList.setEntries(filteredLogs);
     });
 
     const standardHandler = (socketEvent, websocket, sourceAddress) => {
@@ -363,6 +377,7 @@ window.addEventListener("load", (wevt) => {
                 for (const cluster of incomingEvent.data.clusters) {
                     for (const node of cluster.nodes) {
                         const nodeAddress = `${node.hostname}:${node.communicationPort}`;
+                        const webTargetAddress = `${node.hostname}:${node.webPort}`;
 
                         entries.push({
                             name: cluster.name,
@@ -378,13 +393,11 @@ window.addEventListener("load", (wevt) => {
                             clusterName: cluster.name
                         });
 
-                        if (!connectionPool.has(nodeAddress)) {
-                            logsPerNode.set(nodeAddress, []);
-                            connectionPool.set(nodeAddress, connectToTheWebSync(standardHandler, nodeAddress));
-                            const nodeLogsTab = document.createElement('div');
-                            nodeLogsTab.setAttribute('data-address', nodeAddress);
-                            nodeLogsTab.classList.add('tab-bar__item');
-                            nodeLogsTab.appendChild(document.createTextNode(`Node ${nodeAddress}`));
+                        if (!connectionPool.has(webTargetAddress)) {
+                            console.log(webTargetAddress, 'fff');
+                            logsPerNode.set(webTargetAddress, []);
+                            connectionPool.set(webTargetAddress, connectToTheWebSync(standardHandler, webTargetAddress));
+                            const nodeLogsTab = createNodeLogTab(webTargetAddress);
 
                             if (nodesLogsSwitchTab.children.length === 0) {
                                 nodeLogsTab.classList.add('selected');
@@ -400,8 +413,11 @@ window.addEventListener("load", (wevt) => {
                 commandExecutionDialogController.updateOutput(incomingEvent.data.result.statusCode, incomingEvent.data.result.output);
         }
     };
-    const webService = connectToTheWebSync(standardHandler);
+    const webService = connectToTheWebSync(standardHandler, currentBaseUrl);
     connectionPool.set(currentBaseUrl, webService);
+    const nodeLogsTab = createNodeLogTab(currentBaseUrl);
+    nodeLogsTab.classList.add('selected');
+    nodesLogsSwitchTab.appendChild(nodeLogsTab);
     const commandExecutionDialogController = new CommandExecutionDialogController(webService);
 
     eventBus.addEventListener('executeOnNode', (evt) => {

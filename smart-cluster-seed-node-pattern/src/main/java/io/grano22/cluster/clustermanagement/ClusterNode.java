@@ -8,6 +8,7 @@ import java.util.Set;
 
 public record ClusterNode(
     @NonNull String hostname,
+    int webPort,
     int communicationPort,
     int heartbeatPort,
     @NonNull ZonedDateTime lastHeartbeat,

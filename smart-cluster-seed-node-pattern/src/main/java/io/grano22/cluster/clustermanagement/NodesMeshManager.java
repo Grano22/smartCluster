@@ -18,7 +18,7 @@ public final class NodesMeshManager {
     private final @NonNull ClusterNode self;
     @Getter
     private final @NonNull Set<String> discoverableNodes;
-    private @NonNull SingleCPURegisterHostsFilter discoverableNodesStatus;
+    private final @NonNull SingleCPURegisterHostsFilter discoverableNodesStatus;
 
     //private final Map<Cluster, Set<ClusterNode>> clusterNodesCache = Collections.synchronizedMap(new WeakHashMap<>());
     private final Map<String, WeakReference<Cluster>> clusterNodesCache = new ConcurrentHashMap<>();
@@ -26,6 +26,7 @@ public final class NodesMeshManager {
     public static NodesMeshManager initMeshFromConfig(NodeConfig nodeSettings) {
         var selfNode = new ClusterNode(
             nodeSettings.hostname(),
+            nodeSettings.webPort(),
             nodeSettings.communicationPort(),
             nodeSettings.heartbeatPort(),
             ZonedDateTime.now(),
